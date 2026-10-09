@@ -5,7 +5,7 @@ import {
   type TeamIssue,
   type TeamMemberInput,
 } from "@pokebattle/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   data,
   Form,
@@ -21,6 +21,7 @@ import {
 } from "~/battle-engine.server";
 import { displayName } from "~/battle-log";
 import { TypeList } from "~/components/pokemon";
+import { PokemonSearch } from "~/components/pokemon-search";
 import { commitSession, getSession } from "~/session.server";
 import type { Route } from "./+types/team";
 import type { loader as pokemonLoader } from "./team.pokemon.$id";
@@ -35,7 +36,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     getSession(request),
   ]);
   return {
-    // Only what the selects show: the full list weighs ~300 kB.
+    // Only what the search shows: the full list weighs ~300 kB.
     pokemon: pokemon.map((entry) => ({
       id: entry.id,
       name: displayName(entry),
@@ -109,12 +110,29 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
   const complete = slots.every(
     (slot) => slot.pokemonId !== null && slot.moveIds.length > 0,
   );
+  const full = slots.every((slot) => slot.pokemonId !== null);
   const issues = actionData?.issues;
+  const names = useMemo(
+    () => new Map(loaderData.pokemon.map((entry) => [entry.id, entry.name])),
+    [loaderData.pokemon],
+  );
 
   function updateSlot(index: number, slot: Slot) {
     setSlots((current) =>
       current.map((existing, at) => (at === index ? slot : existing)),
     );
+  }
+
+  /** Fills the first free slot, so a removed Pokémon's place is reused. */
+  function addPokemon(pokemonId: number) {
+    setSlots((current) => {
+      const free = current.findIndex((slot) => slot.pokemonId === null);
+      return free === -1
+        ? current
+        : current.map((slot, at) =>
+            at === free ? { pokemonId, moveIds: [] } : slot,
+          );
+    });
   }
 
   return (
@@ -137,6 +155,13 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
             {MAX_MOVES_PER_POKEMON} attaques différentes chacun.
           </p>
         )}
+        <div className="mb-4">
+          <PokemonSearch
+            pokemon={loaderData.pokemon}
+            disabled={full}
+            onSelect={addPokemon}
+          />
+        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {slots.map((slot, index) => (
             <SlotEditor
@@ -145,7 +170,9 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
               key={index}
               index={index}
               slot={slot}
-              pokemon={loaderData.pokemon}
+              name={
+                slot.pokemonId === null ? undefined : names.get(slot.pokemonId)
+              }
               issues={issues?.filter((issue) => issue.slot === index) ?? []}
               onChange={(next) => updateSlot(index, next)}
             />
@@ -166,13 +193,13 @@ export default function Team({ loaderData, actionData }: Route.ComponentProps) {
 function SlotEditor({
   index,
   slot,
-  pokemon,
+  name,
   issues,
   onChange,
 }: {
   index: number;
   slot: Slot;
-  pokemon: { id: number; name: string }[];
+  name: string | undefined;
   issues: TeamIssue[];
   onChange: (slot: Slot) => void;
 }) {
@@ -197,25 +224,23 @@ function SlotEditor({
   return (
     <fieldset className="rounded border border-gray-300 p-3 dark:border-gray-700">
       <legend className="px-1 text-sm font-medium">Pokémon {index + 1}</legend>
-      <select
-        aria-label={`Pokémon ${index + 1}`}
-        value={slot.pokemonId ?? ""}
-        onChange={(event) =>
-          onChange({
-            pokemonId:
-              event.target.value === "" ? null : Number(event.target.value),
-            moveIds: [],
-          })
-        }
-        className="w-full rounded border border-gray-300 bg-white p-2 dark:border-gray-700 dark:bg-gray-900"
-      >
-        <option value="">— Choisir —</option>
-        {pokemon.map((entry) => (
-          <option key={entry.id} value={entry.id}>
-            #{entry.id} {entry.name}
-          </option>
-        ))}
-      </select>
+      {slot.pokemonId === null ? (
+        <p className="py-2 text-sm text-gray-500">Emplacement libre</p>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-medium">
+            #{slot.pokemonId} {name ?? (detail && displayName(detail))}
+          </span>
+          <button
+            type="button"
+            aria-label={`Retirer le Pokémon ${index + 1}`}
+            onClick={() => onChange({ pokemonId: null, moveIds: [] })}
+            className="text-sm text-red-600 hover:underline"
+          >
+            Retirer
+          </button>
+        </div>
+      )}
 
       {detail !== undefined && (
         <div className="mt-2">
