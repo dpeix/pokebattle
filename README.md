@@ -12,6 +12,7 @@ Simulateur de combat web, organisé en monorepo pnpm + Turborepo.
 
 ```
 apps/
+  web/            # @pokebattle/web : interface React Router v7 (mode framework, SSR, Tailwind) (port 5173)
   battle-engine/  # @pokebattle/battle-engine : API Fastify du simulateur de combat (port 3001)
                   #   + compose.yaml : base PostgreSQL dédiée (port 5433), accès via Drizzle
 packages/
@@ -53,6 +54,7 @@ pnpm dev
 
 | Service         | URL en dev               | Détails                                                     |
 | --------------- | ------------------------ | ----------------------------------------------------------- |
+| `web`           | http://localhost:5173    | Interface utilisateur (`apps/web/app/routes.ts` pour les routes) |
 | `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable) ; variables : voir `apps/battle-engine/.env.example` |
 | PostgreSQL du battle-engine | localhost:5433 | Conteneur `apps/battle-engine/compose.yaml`, utilisé uniquement par le battle-engine |
 
@@ -65,4 +67,5 @@ pnpm dev
 - **Variables d'environnement** : `.env` (non commité) chargé par `loadDotEnv()` (`src/env.ts`, `process.loadEnvFile` natif) et lu aussi par Docker Compose.
 - **Tests non mis en cache** par Turborepo (`turbo.json`) : ils dépendent de l'état de la base.
 - **Scripts d'installation** : pnpm 11 les bloque par défaut ; les paquets autorisés sont listés dans `allowBuilds` (`pnpm-workspace.yaml`).
+- **React Router v7** (mode framework) généré depuis la branche `v7` de `remix-run/react-router-templates` ; la v8 est sortie mais la v7 est demandée. Le Dockerfile npm du template a été retiré (incompatible avec le monorepo pnpm). Biome analyse les directives Tailwind v4 (`css.parser.tailwindDirectives`).
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.
