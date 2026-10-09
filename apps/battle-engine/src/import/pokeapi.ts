@@ -1,5 +1,6 @@
 import { parse } from "csv-parse/sync";
-import type { DbClient, ImportCounts } from "./load.js";
+import type { DbClient } from "../db/client.js";
+import type { ImportCounts } from "./load.js";
 import { loadPokeapiData } from "./load.js";
 import type { CsvSource } from "./source.js";
 import {

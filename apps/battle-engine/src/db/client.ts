@@ -12,3 +12,8 @@ export function createDb(databaseUrl: string) {
 }
 
 export type Database = ReturnType<typeof createDb>;
+
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** The database, or an open transaction (the tests run inside one). */
+export type DbClient = Database | Transaction;

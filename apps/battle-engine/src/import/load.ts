@@ -1,6 +1,6 @@
 import { getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import type { Database } from "../db/client.js";
+import type { DbClient, Transaction } from "../db/client.js";
 import {
   abilities,
   items,
@@ -17,11 +17,6 @@ import {
   versionGroups,
 } from "../db/schema.js";
 import type { PokeapiData } from "./transform.js";
-
-type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
-
-/** The database, or an open transaction (the tests import inside one). */
-export type DbClient = Database | Transaction;
 
 export type ImportCounts = Record<keyof PokeapiData, number>;
 
