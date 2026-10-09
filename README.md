@@ -59,7 +59,7 @@ Les cibles `api-*` qui exécutent une commande dans le conteneur PHP supposent l
 
 Les scripts pnpm restent utilisables directement (le `Makefile` les appelle) : `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format`, `pnpm db:up`, `pnpm db:down`, `pnpm api:up`, `pnpm api:down`, `pnpm api:test`. Drizzle Studio : `pnpm --filter @pokebattle/battle-engine db:studio`.
 
-`pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) : le setup global de Vitest (`apps/battle-engine/test/global-setup.ts`) y applique d'abord les migrations Drizzle en attente, y compris sur la base de dev ; les tests PHP passent par `make api-test`.
+`pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) : le setup global de Vitest (`apps/battle-engine/test/global-setup.ts`) y applique d'abord les migrations Drizzle en attente, y compris sur la base de dev. Les tests qui lisent les données de combat importent les CSV de `test/fixtures/pokeapi` dans une transaction annulée à la fin : la base de dev n'est jamais modifiée, et les fichiers de test s'exécutent l'un après l'autre (`fileParallelism: false`), car le `TRUNCATE` de l'import verrouille les tables jusqu'au rollback. Les tests PHP passent par `make api-test`.
 
 Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
 
@@ -88,6 +88,17 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 | `GET /api/users/{id}`     | JWT      | Uniquement son propre compte (403 sinon)                         |
 
 Le JWT (valable 15 min) s'envoie dans l'en-tête `Authorization: Bearer <token>`. Le refresh token (30 jours) ne sert qu'une fois : chaque refresh en renvoie un nouveau, à conserver à la place de l'ancien. Le login est limité à 5 échecs par minute (email + IP). Documentation OpenAPI : https://localhost/api/docs.
+
+### Simulateur de combat (battle-engine)
+
+API sans authentification, appelée uniquement par le serveur web (BFF). Contrats dans `packages/shared` (`pokemon.ts`).
+
+| Endpoint            | Rôle                                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| `GET /pokemon`      | Pokémon sélectionnables pour une équipe (environ 1 000, sans pagination) : noms, types, stats de base |
+| `GET /pokemon/{id}` | Un Pokémon sélectionnable et les attaques à dégâts qu'il peut apprendre (404 sinon) |
+
+Un Pokémon est sélectionnable dans sa forme par défaut (ni méga, ni forme alternative ou de combat) s'il peut apprendre au moins une attaque à dégâts, tous jeux confondus. Les attaques de statut ou sans puissance fixe sont exclues tant que le moteur ne gère pas leurs effets.
 
 ## Choix techniques
 

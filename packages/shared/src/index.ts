@@ -12,3 +12,8 @@ export type {
   OpponentPokemonView,
 } from "./battle.js";
 export type { HealthResponse } from "./health.js";
+export type {
+  LearnableMove,
+  PokemonDetail,
+  PokemonSummary,
+} from "./pokemon.js";

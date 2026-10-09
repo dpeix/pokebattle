@@ -1,5 +1,4 @@
-import { fileURLToPath } from "node:url";
-import { count, eq, TransactionRollbackError } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type Database, type DbClient } from "../src/db/client.js";
@@ -9,8 +8,7 @@ import { loadPokeapiData } from "../src/import/load.js";
 import { importPokeapi, readPokeapiCsv } from "../src/import/pokeapi.js";
 import { type CsvSource, directorySource } from "../src/import/source.js";
 import { transformPokeapi } from "../src/import/transform.js";
-
-const FIXTURES = fileURLToPath(new URL("fixtures/pokeapi", import.meta.url));
+import { FIXTURES, inRolledBackTransaction as rollback } from "./database.js";
 
 // Requires the database container: `pnpm db:up` with a filled-in .env.
 describe("importPokeapi", () => {
@@ -24,24 +22,8 @@ describe("importPokeapi", () => {
     await db.$client.end();
   });
 
-  /**
-   * Runs `test` in a transaction that is always rolled back, so the tests
-   * never touch the data imported in the development database.
-   */
-  async function inRolledBackTransaction(
-    test: (tx: DbClient) => Promise<void>,
-  ): Promise<void> {
-    try {
-      await db.transaction(async (tx) => {
-        await test(tx);
-        tx.rollback();
-      });
-    } catch (error) {
-      if (!(error instanceof TransactionRollbackError)) {
-        throw error;
-      }
-    }
-  }
+  const inRolledBackTransaction = (test: (tx: DbClient) => Promise<void>) =>
+    rollback(db, test);
 
   async function countRows(tx: DbClient, table: PgTable) {
     const [row] = await tx.select({ value: count() }).from(table);
