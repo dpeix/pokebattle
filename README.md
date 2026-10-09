@@ -14,13 +14,18 @@ Simulateur de combat web, organisé en monorepo pnpm + Turborepo.
 ```
 apps/
   web/            # @pokebattle/web : interface React Router v7 (mode framework, SSR, Tailwind) (port 5173)
+                  #   vues uniquement, sans logique métier (serveur en BFF vers les API)
   battle-engine/  # @pokebattle/battle-engine : API Fastify du simulateur de combat (port 3001)
+                  #   simulateur et données PokeAPI ; plugins et routes chargés par @fastify/autoload
                   #   + compose.yaml : base PostgreSQL dédiée (port 5433), accès via Drizzle
-  user-api/       # API Symfony de gestion des utilisateurs (symfony-docker, FrankenPHP), hors workspace pnpm
+  user-api/       # API Symfony 8.1 des fonctionnalités utilisateurs : login, chat, équipes…
+                  #   (symfony-docker, FrankenPHP), hors workspace pnpm
 packages/
   shared/     # @pokebattle/shared : types et contrats partagés (compilé dans dist/)
   tsconfig/   # @pokebattle/tsconfig : configs TypeScript de base (base.json, node.json)
 ```
+
+La section « Périmètre des applications » de `CLAUDE.md` indique où placer une fonctionnalité.
 
 ## Démarrage
 

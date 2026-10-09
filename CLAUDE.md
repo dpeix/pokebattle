@@ -35,6 +35,21 @@ Si une information importante ne peut pas être vérifiée, indique explicitemen
 
 ---
 
+## Périmètre des applications
+
+Chaque fonctionnalité va dans l'application qui en a la responsabilité. Avant d'écrire du code, détermine laquelle est concernée :
+
+- **`apps/web`**, sur **React Router v7 en mode framework** (SSR, Tailwind ; la v7 est voulue, pas la v8) : uniquement l'interface utilisateur et les vues. Pas de logique métier, de règle de combat, ni de gestion de données. Seule exception admise : le rôle de BFF. Les loaders et actions appellent les API et gardent les tokens dans la session (cookie httpOnly), sans calcul métier. Un autre traitement n'y a sa place que si c'est clairement le meilleur endroit, et mieux vaut l'éviter.
+- **`apps/battle-engine`**, API **Fastify** : tout ce qui touche au simulateur de combat et aux données importées de PokeAPI (PostgreSQL dédiée, Drizzle). Plugins et routes sont chargés par `@fastify/autoload` ; on ne modifie pas `src/app.ts` pour en ajouter :
+  - un plugin partagé (décorateur, client, hook global) va dans `src/plugins/` : export par défaut entouré de `fastify-plugin` ;
+  - une route va dans `src/routes/` : export par défaut. Le dossier donne le préfixe d'URL (`src/routes/pokemon/index.ts` → `/pokemon`).
+- **`apps/user-api`**, API **Symfony 8.1** (API Platform, Doctrine) : uniquement les fonctionnalités liées aux utilisateurs, comme l'inscription, le login, le chat ou les équipes. Ses conventions Symfony sont dans `apps/user-api/AGENTS.md`.
+- **`packages/shared`** : types et contrats partagés entre les applications TypeScript.
+
+Une fonctionnalité qui touche plusieurs domaines se découpe selon ce périmètre. Exemple des équipes : leur enregistrement va dans user-api, la validation et le calcul de combat dans battle-engine, l'affichage dans web. En cas de doute sur la répartition, demande.
+
+---
+
 ## Documentation du projet
 
 Avant toute modification, lis la documentation existante du dépôt (README, dossier de documentation, CONTRIBUTING, décisions d'architecture), puis celle de la zone concernée. Elle indique où se trouve chaque chose, où écrire le nouveau code et pourquoi les choix inhabituels ont été faits.
