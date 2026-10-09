@@ -57,6 +57,9 @@ export function BattleArena({
 
       {scene.opponent !== null && (
         <InfoBox
+          // A new box per Pokémon: its HP bar must not slide from the
+          // previous Pokémon's HP.
+          key={scene.opponent.pokemonId}
           fighter={scene.opponent}
           hp={null}
           className="top-[5%] left-[3%]"
@@ -64,6 +67,7 @@ export function BattleArena({
       )}
       {scene.player !== null && (
         <InfoBox
+          key={scene.player.pokemonId}
           fighter={scene.player}
           hp={playerHp}
           className="right-[3%] bottom-[5%]"
