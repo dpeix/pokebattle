@@ -1,9 +1,4 @@
-import type {
-  BattleAction,
-  BattleEvent,
-  BattlePokemonView,
-  BattleView,
-} from "@pokebattle/shared";
+import type { BattleAction, BattleEvent, BattleView } from "@pokebattle/shared";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 import {
   BattleEngineError,
@@ -14,6 +9,7 @@ import {
 import { describeEvent, displayName } from "~/battle-log";
 import { currentStep, isPlaying, type Scene, shownScene } from "~/battle-scene";
 import { BattleArena } from "~/components/battle-arena";
+import { OpponentTeam, PlayerTeam } from "~/components/battle-teams";
 import {
   commitSession,
   getSession,
@@ -144,9 +140,11 @@ function BattleScreen({
   const step = currentStep(playback);
   const scene = shownScene(playback);
   const busy = useNavigation().state !== "idle";
+  // Until the messages are shown, the teams stay as they were before them.
+  const shown = playing ? playback.previous : battle;
 
   return (
-    <main className="container mx-auto max-w-3xl p-4 pt-8">
+    <main className="container mx-auto max-w-7xl p-4 pt-8">
       <div className="flex items-center justify-between">
         <Link to="/team" className="text-sm text-blue-600 hover:underline">
           ← Mon équipe
@@ -156,48 +154,67 @@ function BattleScreen({
         </span>
       </div>
 
-      <section className="mt-4" aria-label="Terrain">
-        <BattleArena
-          scene={scene}
-          cue={step?.cue ?? null}
-          step={playback.index}
-          playerHp={playerHp(battle, scene, playing)}
-        />
-      </section>
+      <div className="mt-4 grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_16rem]">
+        <div className="lg:order-2">
+          <section aria-label="Terrain">
+            <BattleArena
+              scene={scene}
+              cue={step?.cue ?? null}
+              step={playback.index}
+              playerHp={playerHp(battle, scene, playing)}
+            />
+          </section>
 
-      {error !== undefined && !playing && (
-        <p className="mt-4 rounded bg-red-100 p-3 text-red-800 dark:bg-red-950 dark:text-red-200">
-          {error}
-        </p>
-      )}
+          {error !== undefined && !playing && (
+            <p className="mt-4 rounded bg-red-100 p-3 text-red-800 dark:bg-red-950 dark:text-red-200">
+              {error}
+            </p>
+          )}
 
-      <section className="mt-4">
-        {step === undefined ? (
-          <Commands battle={battle} busy={busy} />
-        ) : (
-          <button
-            type="button"
-            onClick={skip}
-            className="flex min-h-24 w-full items-start justify-between gap-4 rounded-lg border-4 border-gray-800 bg-white p-4 text-left text-lg dark:border-gray-600 dark:bg-gray-900"
-          >
-            <span aria-live="polite">{step.text}</span>
-            <span
-              aria-hidden="true"
-              className="self-end text-sm text-red-500 motion-safe:animate-bounce"
-            >
-              ▼
-            </span>
-            <span className="sr-only">Message suivant</span>
-          </button>
-        )}
-      </section>
+          <section className="mt-4">
+            {step === undefined ? (
+              <Commands battle={battle} busy={busy} />
+            ) : (
+              <button
+                type="button"
+                onClick={skip}
+                className="flex min-h-24 w-full items-start justify-between gap-4 rounded-lg border-4 border-gray-800 bg-white p-4 text-left text-lg dark:border-gray-600 dark:bg-gray-900"
+              >
+                <span aria-live="polite">{step.text}</span>
+                <span
+                  aria-hidden="true"
+                  className="self-end text-sm text-red-500 motion-safe:animate-bounce"
+                >
+                  ▼
+                </span>
+                <span className="sr-only">Message suivant</span>
+              </button>
+            )}
+          </section>
 
-      <details className="mt-6">
-        <summary className="cursor-pointer font-semibold">
-          Journal du combat
-        </summary>
-        <BattleLog log={battle.log} />
-      </details>
+          <details className="mt-6">
+            <summary className="cursor-pointer font-semibold">
+              Journal du combat
+            </summary>
+            <BattleLog log={battle.log} />
+          </details>
+        </div>
+
+        <div className="lg:order-1">
+          <PlayerTeam
+            team={shown.player.team}
+            active={shown.player.active}
+            canSwitch={!playing && !busy && battle.phase !== "finished"}
+            highlight={!playing && battle.phase === "choose-switch"}
+          />
+        </div>
+        <div className="lg:order-3">
+          <OpponentTeam
+            revealed={shown.opponent.revealed}
+            teamSize={shown.opponent.teamSize}
+          />
+        </div>
+      </div>
     </main>
   );
 }
@@ -255,30 +272,6 @@ function ActionButton({
   );
 }
 
-function Bench({ battle, busy }: { battle: BattleView; busy: boolean }) {
-  const bench = battle.player.team.filter(
-    (member) => member.slot !== battle.player.active,
-  );
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {bench.map((member: BattlePokemonView) => (
-        <ActionButton
-          key={member.slot}
-          intent="switch"
-          name="slot"
-          value={member.slot}
-          disabled={busy || member.hp === 0}
-        >
-          <span className="font-medium">{displayName(member)}</span>{" "}
-          <span className="text-xs text-gray-500">
-            {member.hp === 0 ? "K.O." : `${member.hp}/${member.stats.hp} PV`}
-          </span>
-        </ActionButton>
-      ))}
-    </div>
-  );
-}
-
 function Commands({ battle, busy }: { battle: BattleView; busy: boolean }) {
   if (battle.phase === "finished") {
     return (
@@ -314,50 +307,41 @@ function Commands({ battle, busy }: { battle: BattleView; busy: boolean }) {
 
   if (battle.phase === "choose-switch") {
     return (
-      <div className="space-y-4">
-        <p className="rounded-lg border-4 border-gray-800 bg-white p-4 text-lg dark:border-gray-600 dark:bg-gray-900">
-          Choisissez le Pokémon à envoyer.
-        </p>
-        <Bench battle={battle} busy={busy} />
-      </div>
+      <p className="rounded-lg border-4 border-gray-800 bg-white p-4 text-lg dark:border-gray-600 dark:bg-gray-900">
+        Choisissez dans votre équipe le Pokémon à envoyer.
+      </p>
     );
   }
 
   const active = battle.player.team[battle.player.active];
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 rounded-lg border-4 border-gray-800 bg-white p-4 sm:grid-cols-[1fr_2fr] dark:border-gray-600 dark:bg-gray-900">
-        <p className="text-lg">
-          Que doit faire {active === undefined ? "" : displayName(active)} ?
-        </p>
-        {battle.player.mustStruggle ? (
-          <ActionButton intent="struggle" disabled={busy}>
-            Lutte <span className="text-xs text-gray-500">(plus de PP)</span>
-          </ActionButton>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {active?.moves.map((move) => (
-              <ActionButton
-                key={move.id}
-                intent="move"
-                name="moveId"
-                value={move.id}
-                disabled={busy || move.pp === 0}
-              >
-                <span className="block font-medium">{displayName(move)}</span>
-                <span className="text-xs text-gray-500">
-                  {displayName(move.type)} · {move.power} · {move.pp}/
-                  {move.maxPp} PP
-                </span>
-              </ActionButton>
-            ))}
-          </div>
-        )}
-      </div>
-      <div>
-        <h3 className="mb-2 font-semibold">Changer de Pokémon</h3>
-        <Bench battle={battle} busy={busy} />
-      </div>
+    <div className="grid gap-4 rounded-lg border-4 border-gray-800 bg-white p-4 sm:grid-cols-[1fr_2fr] dark:border-gray-600 dark:bg-gray-900">
+      <p className="text-lg">
+        Que doit faire {active === undefined ? "" : displayName(active)} ?
+      </p>
+      {battle.player.mustStruggle ? (
+        <ActionButton intent="struggle" disabled={busy}>
+          Lutte <span className="text-xs text-gray-500">(plus de PP)</span>
+        </ActionButton>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {active?.moves.map((move) => (
+            <ActionButton
+              key={move.id}
+              intent="move"
+              name="moveId"
+              value={move.id}
+              disabled={busy || move.pp === 0}
+            >
+              <span className="block font-medium">{displayName(move)}</span>
+              <span className="text-xs text-gray-500">
+                {displayName(move.type)} · {move.power} · {move.pp}/{move.maxPp}{" "}
+                PP
+              </span>
+            </ActionButton>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
