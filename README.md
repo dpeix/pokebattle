@@ -53,7 +53,7 @@ Les cibles `api-*` qui exécutent une commande dans le conteneur PHP supposent l
 
 Les scripts pnpm restent utilisables directement (le `Makefile` les appelle) : `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format`, `pnpm db:up`, `pnpm db:down`, `pnpm api:up`, `pnpm api:down`, `pnpm api:test`. Drizzle Studio : `pnpm --filter @pokebattle/battle-engine db:studio`.
 
-`pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) ; les tests PHP passent par `make api-test`.
+`pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) : le setup global de Vitest (`apps/battle-engine/test/global-setup.ts`) y applique d'abord les migrations Drizzle en attente, y compris sur la base de dev ; les tests PHP passent par `make api-test`.
 
 Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
 
@@ -84,7 +84,7 @@ Le JWT (valable 15 min) s'envoie dans l'en-tête `Authorization: Bearer <token>`
 - **pnpm workspaces + Turborepo** : orchestration et cache des tâches `build`, `dev`, `typecheck`, `test`.
 - **Biome** : lint et formatage du code TypeScript/JSON, configuré une seule fois à la racine (`biome.json`).
 - **Fastify** pour le simulateur : `buildApp()` (`apps/battle-engine/src/app.ts`) construit l'application sans ouvrir de port, les tests passent par `app.inject()` (Vitest).
-- **PostgreSQL + Drizzle** pour les données du simulateur (futur import PokeAPI) : base dédiée au battle-engine, conteneurisée ; le serveur Fastify tourne sur l'hôte. Le client est exposé via `app.db` (`src/plugins/db.ts`). Les migrations générées dans `drizzle/` sont commitées et ne se modifient pas à la main.
+- **PostgreSQL + Drizzle** pour les données du simulateur (données de combat importées de PokeAPI, tables dans `src/db/schema.ts`) : base dédiée au battle-engine, conteneurisée ; le serveur Fastify tourne sur l'hôte. Le client est exposé via `app.db` (`src/plugins/db.ts`). Les migrations générées dans `drizzle/` sont commitées et ne se modifient pas à la main.
 - **Variables d'environnement** : `.env` (non commité) chargé par `loadDotEnv()` (`src/env.ts`, `process.loadEnvFile` natif) et lu aussi par Docker Compose.
 - **Tests non mis en cache** par Turborepo (`turbo.json`) : ils dépendent de l'état de la base. Turborepo filtre par défaut les variables d'environnement (mode strict) : `DATABASE_URL` est déclarée en `passThroughEnv` sur la tâche `test`, sinon celle fournie par la CI n'atteindrait pas les tests.
 - **Scripts d'installation** : pnpm 11 les bloque par défaut ; les paquets autorisés sont listés dans `allowBuilds` (`pnpm-workspace.yaml`).
