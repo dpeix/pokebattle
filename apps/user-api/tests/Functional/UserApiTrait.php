@@ -28,11 +28,19 @@ trait UserApiTrait
 
     private function login(Client $client, string $email, string $password = self::PASSWORD): string
     {
+        return $this->loginWithRefreshToken($client, $email, $password)['token'];
+    }
+
+    /**
+     * @return array{token: string, refresh_token: string}
+     */
+    private function loginWithRefreshToken(Client $client, string $email, string $password = self::PASSWORD): array
+    {
         $response = $client->request('POST', '/api/login_check', [
             'json' => ['email' => $email, 'password' => $password],
         ]);
         self::assertResponseIsSuccessful();
 
-        return $response->toArray()['token'];
+        return $response->toArray();
     }
 }

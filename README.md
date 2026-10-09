@@ -92,11 +92,12 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 | Endpoint                  | Accès    | Rôle                                                              |
 | ------------------------- | -------- | ----------------------------------------------------------------- |
 | `POST /api/users`         | public   | Inscription : `{ "email", "password" }` (8 caractères min.) → 201 |
-| `POST /api/login_check`   | public   | Login : `{ "email", "password" }` → `{ "token" }` (JWT, 15 min)   |
+| `POST /api/login_check`   | public   | Login : `{ "email", "password" }` → `{ "token", "refresh_token" }` |
+| `POST /api/token/refresh` | public   | `{ "refresh_token" }` → nouveaux `token` et `refresh_token`       |
 | `GET /api/me`             | JWT      | Utilisateur connecté                                              |
 | `GET /api/users/{id}`     | JWT      | Uniquement son propre compte (403 sinon)                         |
 
-Le JWT s'envoie dans l'en-tête `Authorization: Bearer <token>`. Le login est limité à 5 échecs par minute (email + IP). Documentation OpenAPI : https://localhost/api/docs.
+Le JWT (valable 15 min) s'envoie dans l'en-tête `Authorization: Bearer <token>`. Le refresh token (30 jours) ne sert qu'une fois : chaque refresh en renvoie un nouveau, à conserver à la place de l'ancien. Le login est limité à 5 échecs par minute (email + IP). Documentation OpenAPI : https://localhost/api/docs.
 
 
 
@@ -113,5 +114,6 @@ Le JWT s'envoie dans l'en-tête `Authorization: Bearer <token>`. Le login est li
 - **API utilisateurs** : API Platform 5 + Doctrine ORM (PostgreSQL), SecurityBundle, LexikJWTAuthenticationBundle, NelmioCorsBundle. La passphrase JWT est dans `.env.local` (non commité) ; `.env.test` contient une passphrase de test non sensible car Symfony ne charge pas `.env.local` en environnement de test.
 - **Front en BFF** : le serveur React Router appellera l'API utilisateurs et gardera les tokens dans sa propre session (cookie httpOnly) ; Symfony renvoie donc les tokens dans le corps JSON, sans cookie, et le navigateur n'appelle pas l'API directement.
 - **Utilisateurs** : identifiant UUID v7 (non énumérable), email normalisé en minuscules (unicité insensible à la casse), mot de passe haché par `App\State\UserPasswordHasher`, rôles ignorés à l'inscription.
+- **Refresh tokens** : GesdinetJWTRefreshTokenBundle v3, usage unique (rotation) et stockage haché en base. Sa détection de réutilisation (`reuse_detection`) n'est pas activée : en 3.0.0 elle empêche le conteneur de se construire (markitosgv/JWTRefreshTokenBundle#434) et reste inopérante avec les tokens hachés (#433). Sa recipe Flex est « contrib », la configuration (`config/packages/gesdinet_jwt_refresh_token.yaml`) est écrite à la main.
 - **Tests de l'API utilisateurs** : PHPUnit + `ApiTestCase` (`api-platform/test`), Foundry pour les données, DAMA DoctrineTestBundle (chaque test est annulé par rollback). La recipe DAMA est « contrib » et ignorée par Flex (`allow-contrib` désactivé) : le bundle et l'extension PHPUnit sont enregistrés à la main comme le fait la recipe.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.

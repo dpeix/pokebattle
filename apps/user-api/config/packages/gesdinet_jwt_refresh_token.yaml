@@ -1,0 +1,9 @@
+gesdinet_jwt_refresh_token:
+    refresh_token_class: App\Entity\RefreshToken
+    # 30 days; each refresh issues a new token and spends the old one
+    ttl: 2592000
+    single_use: true
+    # Only hashes are stored, so a database copy cannot be used to refresh
+    hash_tokens: true
+    # Document /api/token/refresh in the OpenAPI specification
+    api_platform: true

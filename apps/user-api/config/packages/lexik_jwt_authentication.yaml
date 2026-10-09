@@ -4,3 +4,8 @@ lexik_jwt_authentication:
     pass_phrase: '%env(JWT_PASSPHRASE)%'
     # Short-lived access tokens: clients renew them with a refresh token
     token_ttl: 900
+    # Document the login endpoint in the OpenAPI specification
+    api_platform:
+        check_path: /api/login_check
+        username_path: email
+        password_path: password
