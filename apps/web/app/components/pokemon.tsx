@@ -31,7 +31,10 @@ export function HpBar({ percent }: { percent: number }) {
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <div className={`h-full ${color}`} style={{ width: `${percent}%` }} />
+      <div
+        className={`h-full ${color} transition-[width,background-color] duration-700 ease-out`}
+        style={{ width: `${percent}%` }}
+      />
     </div>
   );
 }

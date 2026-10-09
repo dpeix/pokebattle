@@ -4,6 +4,64 @@
   --font-sans:
     "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Battle screen: one animation per playback cue (battle-scene.ts). */
+  --animate-battle-enter: battle-enter 450ms ease-out;
+  --animate-battle-attack-player: battle-attack-player 400ms ease-in-out;
+  --animate-battle-attack-opponent: battle-attack-opponent 400ms ease-in-out;
+  --animate-battle-hit: battle-hit 500ms linear;
+  --animate-battle-faint: battle-faint 600ms ease-in forwards;
+
+  @keyframes battle-enter {
+    from {
+      transform: scale(0.1);
+      opacity: 0;
+      filter: brightness(4);
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+      filter: brightness(1);
+    }
+  }
+
+  /* Each side lunges toward the other one. */
+  @keyframes battle-attack-player {
+    40% {
+      transform: translate(12%, -10%);
+    }
+  }
+
+  @keyframes battle-attack-opponent {
+    40% {
+      transform: translate(-12%, 10%);
+    }
+  }
+
+  @keyframes battle-hit {
+    0%,
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    20%,
+    60% {
+      transform: translateX(-6%);
+      opacity: 0.2;
+    }
+    40%,
+    80% {
+      transform: translateX(6%);
+      opacity: 1;
+    }
+  }
+
+  @keyframes battle-faint {
+    to {
+      transform: translateY(40%);
+      opacity: 0;
+    }
+  }
 }
 
 html,

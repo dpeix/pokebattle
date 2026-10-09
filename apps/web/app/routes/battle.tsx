@@ -12,12 +12,14 @@ import {
   playAction,
 } from "~/battle-engine.server";
 import { describeEvent, displayName } from "~/battle-log";
-import { HpBar, TypeList } from "~/components/pokemon";
+import { currentStep, isPlaying, type Scene, shownScene } from "~/battle-scene";
+import { BattleArena } from "~/components/battle-arena";
 import {
   commitSession,
   getSession,
   type PokebattleSession,
 } from "~/session.server";
+import { useBattlePlayback } from "~/use-battle-playback";
 import type { Route } from "./+types/battle";
 
 export function meta(_: Route.MetaArgs) {
@@ -120,9 +122,27 @@ export default function Battle({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { battle } = loaderData;
-  const player = battle.player.team[battle.player.active];
-  const opponent = battle.opponent.active;
+  // A rematch is a new battle: its screen starts over, with its opening.
+  return (
+    <BattleScreen
+      key={loaderData.battle.id}
+      battle={loaderData.battle}
+      error={actionData?.error}
+    />
+  );
+}
+
+function BattleScreen({
+  battle,
+  error,
+}: {
+  battle: BattleView;
+  error: string | undefined;
+}) {
+  const { playback, skip } = useBattlePlayback(battle);
+  const playing = isPlaying(playback);
+  const step = currentStep(playback);
+  const scene = shownScene(playback);
   const busy = useNavigation().state !== "idle";
 
   return (
@@ -136,51 +156,74 @@ export default function Battle({
         </span>
       </div>
 
-      <section className="mt-4 rounded border border-gray-300 p-4 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">
-            {displayName(opponent)} <TypeList types={opponent.types} />
-          </h2>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            Adversaire : {battle.opponent.remaining}/{battle.opponent.teamSize}{" "}
-            Pokémon
-          </span>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <HpBar percent={opponent.hpPercent} />
-          <span className="w-12 text-right text-sm">
-            {opponent.hpPercent} %
-          </span>
-        </div>
+      <section className="mt-4" aria-label="Terrain">
+        <BattleArena
+          scene={scene}
+          cue={step?.cue ?? null}
+          step={playback.index}
+          playerHp={playerHp(battle, scene, playing)}
+        />
       </section>
 
-      {player !== undefined && (
-        <section className="mt-4 rounded border border-gray-300 p-4 dark:border-gray-700">
-          <h2 className="font-semibold">
-            {displayName(player)} <TypeList types={player.types} />
-          </h2>
-          <div className="mt-2 flex items-center gap-2">
-            <HpBar percent={Math.ceil((player.hp / player.stats.hp) * 100)} />
-            <span className="w-20 text-right text-sm">
-              {player.hp}/{player.stats.hp}
-            </span>
-          </div>
-        </section>
-      )}
-
-      {actionData?.error && (
+      {error !== undefined && !playing && (
         <p className="mt-4 rounded bg-red-100 p-3 text-red-800 dark:bg-red-950 dark:text-red-200">
-          {actionData.error}
+          {error}
         </p>
       )}
 
       <section className="mt-4">
-        <Commands battle={battle} busy={busy} />
+        {step === undefined ? (
+          <Commands battle={battle} busy={busy} />
+        ) : (
+          <button
+            type="button"
+            onClick={skip}
+            className="flex min-h-24 w-full items-start justify-between gap-4 rounded-lg border-4 border-gray-800 bg-white p-4 text-left text-lg dark:border-gray-600 dark:bg-gray-900"
+          >
+            <span aria-live="polite">{step.text}</span>
+            <span
+              aria-hidden="true"
+              className="self-end text-sm text-red-500 motion-safe:animate-bounce"
+            >
+              ▼
+            </span>
+            <span className="sr-only">Message suivant</span>
+          </button>
+        )}
       </section>
 
-      <BattleLog log={battle.log} />
+      <details className="mt-6">
+        <summary className="cursor-pointer font-semibold">
+          Journal du combat
+        </summary>
+        <BattleLog log={battle.log} />
+      </details>
     </main>
   );
+}
+
+/**
+ * The player's HP in numbers: exact once the messages are shown; while
+ * they play, worked out from the percentage the events give.
+ */
+function playerHp(
+  battle: BattleView,
+  scene: Scene,
+  playing: boolean,
+): { hp: number; max: number } | null {
+  const fighter = scene.player;
+  // Pokémon of the same species have the same stats (level 50, same IVs).
+  const member = battle.player.team.find(
+    (candidate) => candidate.pokemonId === fighter?.pokemonId,
+  );
+  if (fighter === null || member === undefined) {
+    return null;
+  }
+  const max = member.stats.hp;
+  if (!playing) {
+    return { hp: battle.player.team[battle.player.active]?.hp ?? 0, max };
+  }
+  return { hp: Math.ceil((max * fighter.hpPercent) / 100), max };
 }
 
 function ActionButton({
@@ -271,8 +314,10 @@ function Commands({ battle, busy }: { battle: BattleView; busy: boolean }) {
 
   if (battle.phase === "choose-switch") {
     return (
-      <div>
-        <h3 className="mb-2 font-semibold">Choisissez le Pokémon à envoyer</h3>
+      <div className="space-y-4">
+        <p className="rounded-lg border-4 border-gray-800 bg-white p-4 text-lg dark:border-gray-600 dark:bg-gray-900">
+          Choisissez le Pokémon à envoyer.
+        </p>
         <Bench battle={battle} busy={busy} />
       </div>
     );
@@ -281,14 +326,16 @@ function Commands({ battle, busy }: { battle: BattleView; busy: boolean }) {
   const active = battle.player.team[battle.player.active];
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="mb-2 font-semibold">Attaques</h3>
+      <div className="grid gap-4 rounded-lg border-4 border-gray-800 bg-white p-4 sm:grid-cols-[1fr_2fr] dark:border-gray-600 dark:bg-gray-900">
+        <p className="text-lg">
+          Que doit faire {active === undefined ? "" : displayName(active)} ?
+        </p>
         {battle.player.mustStruggle ? (
           <ActionButton intent="struggle" disabled={busy}>
             Lutte <span className="text-xs text-gray-500">(plus de PP)</span>
           </ActionButton>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             {active?.moves.map((move) => (
               <ActionButton
                 key={move.id}
@@ -297,7 +344,7 @@ function Commands({ battle, busy }: { battle: BattleView; busy: boolean }) {
                 value={move.id}
                 disabled={busy || move.pp === 0}
               >
-                <span className="font-medium">{displayName(move)}</span>{" "}
+                <span className="block font-medium">{displayName(move)}</span>
                 <span className="text-xs text-gray-500">
                   {displayName(move.type)} · {move.power} · {move.pp}/
                   {move.maxPp} PP
@@ -329,8 +376,7 @@ function turnsOf(log: BattleEvent[]): BattleEvent[][] {
 
 function BattleLog({ log }: { log: BattleEvent[] }) {
   return (
-    <section className="mt-6">
-      <h3 className="mb-2 font-semibold">Journal</h3>
+    <section className="mt-2">
       <ol className="max-h-80 space-y-3 overflow-y-auto rounded border border-gray-300 p-3 text-sm dark:border-gray-700">
         {turnsOf(log).map((turn, index) => (
           <li
