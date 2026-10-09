@@ -17,6 +17,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@fastify/autoload": "^6.5.0",
     "@pokebattle/shared": "workspace:*",
     "csv-parse": "^7.0.3",
     "drizzle-orm": "^0.45.3",

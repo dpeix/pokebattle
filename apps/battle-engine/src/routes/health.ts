@@ -14,7 +14,9 @@ const healthResponseSchema = {
   },
 } as const;
 
-export async function healthRoutes(app: FastifyInstance): Promise<void> {
+export default async function healthRoutes(
+  app: FastifyInstance,
+): Promise<void> {
   app.get<{ Reply: HealthResponse }>(
     "/health",
     {

@@ -12,7 +12,7 @@ export interface DbPluginOptions {
   databaseUrl: string;
 }
 
-export const dbPlugin = fp<DbPluginOptions>(
+export default fp<DbPluginOptions>(
   async (app: FastifyInstance, { databaseUrl }) => {
     const db = createDb(databaseUrl);
 
