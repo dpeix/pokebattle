@@ -89,7 +89,7 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 
 Le JWT (valable 15 min) s'envoie dans l'en-tête `Authorization: Bearer <token>`. Le refresh token (30 jours) ne sert qu'une fois : chaque refresh en renvoie un nouveau, à conserver à la place de l'ancien. Le login est limité à 5 échecs par minute (email + IP). Documentation OpenAPI : https://localhost/api/docs.
 
-
+## Choix techniques
 
 - **pnpm workspaces + Turborepo** : orchestration et cache des tâches `build`, `dev`, `typecheck`, `test`.
 - **Biome** : lint et formatage du code TypeScript/JSON, configuré une seule fois à la racine (`biome.json`).
