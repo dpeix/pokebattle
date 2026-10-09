@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: ~
+  workflow_dispatch: ~
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Web and battle engine
+    runs-on: ubuntu-latest
+    services:
+      # Ephemeral database for the battle-engine tests; credentials are CI-only
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: battle
+          POSTGRES_PASSWORD: battle
+          POSTGRES_DB: battle
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U battle -d battle"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://battle:battle@localhost:5432/battle
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        # Version read from "packageManager" in package.json
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint and formatting (Biome)
+        run: pnpm exec biome ci .
+      - name: Type check
+        run: pnpm typecheck
+      - name: Build
+        run: pnpm build
+      - name: Test
+        run: pnpm test
+      - name: Audit dependencies
+        run: pnpm audit --prod --audit-level high
+
+  user-api:
+    name: User API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/user-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build images
+        run: docker compose build --pull
+      - name: Start services
+        run: docker compose up --wait --no-build
+      - name: Validate composer files
+        run: docker compose exec -T php composer validate --strict
+      - name: Audit dependencies
+        run: docker compose exec -T php composer audit
+      - name: Coding standards (PHP-CS-Fixer)
+        run: docker compose exec -T php vendor/bin/php-cs-fixer check --diff
+      - name: Static analysis (PHPStan)
+        run: |
+          # PHPStan reads the compiled dev container
+          docker compose exec -T php bin/console cache:warmup --quiet
+          docker compose exec -T php vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+      - name: Lint Symfony configuration
+        run: |
+          docker compose exec -T php bin/console lint:yaml config/ --parse-tags
+          docker compose exec -T php bin/console lint:container
+          docker compose exec -T php bin/console -e test lint:container
+      - name: Prepare test environment
+        run: |
+          docker compose exec -T -e APP_ENV=test php bin/console lexik:jwt:generate-keypair --skip-if-exists
+          docker compose exec -T php bin/console -e test doctrine:database:create --if-not-exists
+          docker compose exec -T php bin/console -e test doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Validate Doctrine schema
+        run: docker compose exec -T php bin/console -e test doctrine:schema:validate
+      - name: Test (PHPUnit)
+        run: docker compose exec -T php bin/phpunit
+      - name: Check HTTPS reachability
+        run: curl --insecure --fail-with-body --silent --show-error https://localhost/api
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+  user-api-prod-image:
+    name: User API production image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build production image
+        # Catches production-only breakage, such as a bundle installed as a dev dependency
+        run: docker build --pull --target frankenphp_prod apps/user-api
