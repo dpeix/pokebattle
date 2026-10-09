@@ -50,11 +50,26 @@ cp apps/battle-engine/.env.example apps/battle-engine/.env   # puis changer le m
 pnpm db:up
 pnpm dev
 
-# API utilisateurs (premier lancement : docker compose build --pull --no-cache dans apps/user-api)
-pnpm api:up
+pnpm api:up   # API utilisateurs (voir « Premier lancement de l'API utilisateurs »)
 ```
 
 `pnpm test` a besoin de la base démarrée (`pnpm db:up`) : le test de santé du battle-engine interroge la vraie base.
+
+### Premier lancement de l'API utilisateurs
+
+Dans `apps/user-api` :
+
+```sh
+docker compose build --pull --no-cache
+# Passphrase des clés JWT, jamais commitée (.env ne contient qu'une valeur vide)
+printf 'JWT_PASSPHRASE=%s\n' "$(openssl rand -hex 32)" > .env.local
+docker compose up --wait
+# Clés JWT de dev et de test (config/jwt/, ignorées par git)
+docker compose exec php bin/console lexik:jwt:generate-keypair
+docker compose exec -e APP_ENV=test php bin/console lexik:jwt:generate-keypair
+```
+
+Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
 
 ## Services
 
@@ -63,6 +78,7 @@ pnpm api:up
 | `web`           | http://localhost:5173    | Interface utilisateur (`apps/web/app/routes.ts` pour les routes) |
 | `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable) ; variables : voir `apps/battle-engine/.env.example` |
 | `user-api`      | https://localhost        | API Symfony 8 ; certificat TLS local auto-signé à accepter. Commandes : `docker compose exec php bin/console …` dans `apps/user-api` |
+| PostgreSQL de l'API utilisateurs | port hôte aléatoire (`docker compose port database 5432`) | Service `database` de `apps/user-api/compose.yaml`, utilisé uniquement par l'API Symfony |
 | PostgreSQL du battle-engine | localhost:5433 | Conteneur `apps/battle-engine/compose.yaml`, utilisé uniquement par le battle-engine |
 
 ## Choix techniques
@@ -77,4 +93,5 @@ pnpm api:up
 - **React Router v7** (mode framework) généré depuis la branche `v7` de `remix-run/react-router-templates` ; la v8 est sortie mais la v7 est demandée. Le Dockerfile npm du template a été retiré (incompatible avec le monorepo pnpm). Biome analyse les directives Tailwind v4 (`css.parser.tailwindDirectives`).
 - **symfony-docker** pour l'API utilisateurs : copié depuis `dunglas/symfony-docker` au commit `4227566` (2026-08-31, sans son historique git), squelette Symfony 8.1 généré par le conteneur au premier démarrage. Sa documentation amont est dans `apps/user-api/README.md` et `apps/user-api/docs/` ; ses fichiers `.github/` ne sont pas exécutés depuis ce sous-dossier.
 - **FrankenPHP fixé en 1.12** (`apps/user-api/Dockerfile`) : la 1.13 embarque Mercure 1.0, incompatible avec la config Mercure du template (le conteneur redémarre en boucle, dunglas/symfony-docker#968). À retirer quand la PR amont #969 sera publiée et reportée ici.
+- **API utilisateurs** : API Platform 5 + Doctrine ORM (PostgreSQL), SecurityBundle, LexikJWTAuthenticationBundle, NelmioCorsBundle. La passphrase JWT est dans `.env.local` (non commité) ; `.env.test` contient une passphrase de test non sensible car Symfony ne charge pas `.env.local` en environnement de test.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.
