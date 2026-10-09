@@ -16,7 +16,8 @@
     "db:up": "pnpm --filter @pokebattle/battle-engine db:up",
     "db:down": "pnpm --filter @pokebattle/battle-engine db:down",
     "api:up": "cd apps/user-api && docker compose up --wait",
-    "api:down": "cd apps/user-api && docker compose down --remove-orphans"
+    "api:down": "cd apps/user-api && docker compose down --remove-orphans",
+    "api:test": "cd apps/user-api && docker compose exec -T php bin/phpunit"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

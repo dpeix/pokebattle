@@ -38,6 +38,7 @@ packages/
 | `pnpm db:down`   | Arrête la base (les données restent dans le volume) |
 | `pnpm api:up`    | Démarre l'API Symfony (conteneur FrankenPHP)       |
 | `pnpm api:down`  | Arrête l'API Symfony                               |
+| `pnpm api:test`  | Tests PHPUnit de l'API Symfony (conteneur démarré) |
 
 Commandes Drizzle (dans `apps/battle-engine`, ou via `pnpm --filter @pokebattle/battle-engine <script>`) :
 `db:generate` (génère les migrations SQL dans `drizzle/` depuis `src/db/schema.ts`), `db:migrate` (les applique), `db:studio`.
@@ -67,7 +68,12 @@ docker compose up --wait
 # Clés JWT de dev et de test (config/jwt/, ignorées par git)
 docker compose exec php bin/console lexik:jwt:generate-keypair
 docker compose exec -e APP_ENV=test php bin/console lexik:jwt:generate-keypair
+# Base de test (app_test), puis tests
+docker compose exec php bin/console -e test doctrine:database:create --if-not-exists
+pnpm api:test
 ```
+
+`pnpm test` (Turborepo) ne lance que les tests Node ; les tests PHP passent par `pnpm api:test`.
 
 Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
 
@@ -94,4 +100,5 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 - **symfony-docker** pour l'API utilisateurs : copié depuis `dunglas/symfony-docker` au commit `4227566` (2026-08-31, sans son historique git), squelette Symfony 8.1 généré par le conteneur au premier démarrage. Sa documentation amont est dans `apps/user-api/README.md` et `apps/user-api/docs/` ; ses fichiers `.github/` ne sont pas exécutés depuis ce sous-dossier.
 - **FrankenPHP fixé en 1.12** (`apps/user-api/Dockerfile`) : la 1.13 embarque Mercure 1.0, incompatible avec la config Mercure du template (le conteneur redémarre en boucle, dunglas/symfony-docker#968). À retirer quand la PR amont #969 sera publiée et reportée ici.
 - **API utilisateurs** : API Platform 5 + Doctrine ORM (PostgreSQL), SecurityBundle, LexikJWTAuthenticationBundle, NelmioCorsBundle. La passphrase JWT est dans `.env.local` (non commité) ; `.env.test` contient une passphrase de test non sensible car Symfony ne charge pas `.env.local` en environnement de test.
+- **Tests de l'API utilisateurs** : PHPUnit + `ApiTestCase` (`api-platform/test`), Foundry pour les données, DAMA DoctrineTestBundle (chaque test est annulé par rollback). La recipe DAMA est « contrib » et ignorée par Flex (`allow-contrib` désactivé) : le bundle et l'extension PHPUnit sont enregistrés à la main comme le fait la recipe.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.
