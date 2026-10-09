@@ -8,9 +8,14 @@ export type {
   BattleStats,
   BattleView,
   BattleWinner,
+  CreateBattleRequest,
+  InvalidTeamResponse,
   Named,
   OpponentPokemonView,
+  TeamIssue,
+  TeamMemberInput,
 } from "./battle.js";
+export { MAX_MOVES_PER_POKEMON, TEAM_SIZE } from "./battle.js";
 export type { HealthResponse } from "./health.js";
 export type {
   LearnableMove,

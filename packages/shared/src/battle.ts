@@ -10,6 +10,37 @@ export interface Named {
   nameEn: string | null;
 }
 
+/** Pokémon per team, for the player and the bot alike. */
+export const TEAM_SIZE = 6;
+export const MAX_MOVES_PER_POKEMON = 4;
+
+export interface TeamMemberInput {
+  pokemonId: number;
+  /** 1 to `MAX_MOVES_PER_POKEMON` distinct damaging moves it can learn. */
+  moveIds: number[];
+}
+
+/** Body of `POST /battles`: exactly `TEAM_SIZE` members. */
+export interface CreateBattleRequest {
+  team: TeamMemberInput[];
+}
+
+/**
+ * Why a team member was refused: the Pokémon is not selectable (see
+ * `GET /pokemon`), or it cannot learn `moveId` as a damaging move.
+ */
+export type TeamIssue =
+  | { slot: number; reason: "pokemon-not-allowed"; pokemonId: number }
+  | { slot: number; reason: "move-not-allowed"; moveId: number };
+
+/** 400 reply of `POST /battles` for a well-formed but invalid team. */
+export interface InvalidTeamResponse {
+  statusCode: 400;
+  error: string;
+  message: string;
+  issues: TeamIssue[];
+}
+
 export type BattleSide = "player" | "opponent";
 
 /**

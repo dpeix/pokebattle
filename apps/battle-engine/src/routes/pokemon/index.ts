@@ -4,6 +4,7 @@ import {
   findPokemonDetail,
   listSelectablePokemon,
 } from "../../data/catalog.js";
+import { sendError } from "../../http.js";
 import { errorSchema, idParamsSchema } from "../../schemas/common.js";
 import {
   pokemonDetailSchema,
@@ -31,10 +32,7 @@ export default async function pokemonRoutes(
     },
     async (request, reply) => {
       const detail = await findPokemonDetail(app.db, request.params.id);
-      if (detail === undefined) {
-        return reply.callNotFound();
-      }
-      return detail;
+      return detail ?? sendError(reply, 404, "Pokémon not found");
     },
   );
 }

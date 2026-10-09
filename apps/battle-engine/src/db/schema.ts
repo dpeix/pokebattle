@@ -10,10 +10,14 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
+  timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
+import type { BattleState } from "../battle/types.js";
 
 export const versionGroups = pgTable("version_groups", {
   id: integer("id").primaryKey(),
@@ -219,4 +223,21 @@ export const items = pgTable("items", {
   flingPower: integer("fling_power"),
   shortEffectFr: text("short_effect_fr"),
   shortEffectEn: text("short_effect_en"),
+});
+
+// Battles against the bot. Not filled by the import: the state holds a copy
+// of the reference data it needs, so no foreign key ties a battle to the
+// imported tables (their TRUNCATE, without CASCADE, would then fail).
+export const battles = pgTable("battles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  state: jsonb("state").$type<BattleState>().notNull(),
+  // Incremented by every update: an update expecting an older version lost
+  // a race with another action on the same battle (optimistic locking).
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });

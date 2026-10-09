@@ -72,7 +72,7 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 | Service         | URL en dev               | Détails                                                     |
 | --------------- | ------------------------ | ----------------------------------------------------------- |
 | `web`           | http://localhost:5173    | Interface utilisateur (`apps/web/app/routes.ts` pour les routes) |
-| `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable) ; variables : voir `apps/battle-engine/.env.example` |
+| `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable), endpoints du simulateur ci-dessous ; variables : voir `apps/battle-engine/.env.example` |
 | `user-api`      | https://localhost        | API Symfony 8 ; certificat TLS local auto-signé à accepter. Commandes : `docker compose exec php bin/console …` dans `apps/user-api` |
 | PostgreSQL de l'API utilisateurs | port hôte aléatoire (`docker compose port database 5432`) | Service `database` de `apps/user-api/compose.yaml`, utilisé uniquement par l'API Symfony |
 | PostgreSQL du battle-engine | localhost:5433 | Conteneur `apps/battle-engine/compose.yaml`, utilisé uniquement par le battle-engine |
@@ -91,14 +91,30 @@ Le JWT (valable 15 min) s'envoie dans l'en-tête `Authorization: Bearer <token>`
 
 ### Simulateur de combat (battle-engine)
 
-API sans authentification, appelée uniquement par le serveur web (BFF). Contrats dans `packages/shared` (`pokemon.ts`).
+API sans authentification, appelée uniquement par le serveur web (BFF). Contrats dans `packages/shared` (`pokemon.ts`, `battle.ts`). Les erreurs suivent le format de Fastify (`statusCode`, `error`, `message`).
 
 | Endpoint            | Rôle                                                                 |
 | ------------------- | -------------------------------------------------------------------- |
 | `GET /pokemon`      | Pokémon sélectionnables pour une équipe (environ 1 000, sans pagination) : noms, types, stats de base |
 | `GET /pokemon/{id}` | Un Pokémon sélectionnable et les attaques à dégâts qu'il peut apprendre (404 sinon) |
+| `POST /battles`     | `{ "team": [{ "pokemonId", "moveIds" }] }` (6 membres, 1 à 4 attaques distinctes chacun) → 201 et la vue du combat contre un bot à équipe aléatoire ; 400 avec `issues` (emplacement et raison) si un Pokémon ou une attaque n'est pas autorisé |
+| `GET /battles/{id}` | Vue du combat côté joueur (404 si inconnu) |
+| `POST /battles/{id}/actions` | `{ "type": "move", "moveId" }`, `{ "type": "switch", "slot" }` ou `{ "type": "struggle" }` → vue après l'action ; 400 si les règles l'interdisent, 409 si le combat est terminé ou si une autre action a été enregistrée entre-temps |
 
 Un Pokémon est sélectionnable dans sa forme par défaut (ni méga, ni forme alternative ou de combat) s'il peut apprendre au moins une attaque à dégâts, tous jeux confondus. Les attaques de statut ou sans puissance fixe sont exclues tant que le moteur ne gère pas leurs effets.
+
+La vue d'un combat montre toute l'équipe du joueur, mais seulement le Pokémon actif du bot, avec ses PV en pourcentage. Le journal (`log`) liste les événements (`switch`, `move`, `damage`, `faint`…) ; le texte affiché est construit par le web.
+
+#### Règles du combat
+
+Combat simple, en 6 contre 6, contre un bot. Le bot choisit une attaque au hasard parmi celles qui ont des PP. Il ne change jamais de Pokémon de lui-même, et remplace au hasard un Pokémon mis K.O.
+
+- **Pokémon** : niveau 50, IV 31, EV 0, nature neutre. Les talents et les objets n'ont aucun effet.
+- **Ordre du tour** : les changements de Pokémon passent en premier, puis les attaques par priorité, puis par vitesse (tirage en cas d'égalité). Un Pokémon mis K.O. avant d'agir n'attaque pas, et le joueur choisit alors son remplaçant (phase `choose-switch`, sans nouveau tour).
+- **Dégâts** : formule des générations 5 et suivantes. Coup critique ×1,5 (chance selon le `crit_rate` de l'attaque : 1/24, 1/8, 1/2, puis toujours), aléa de 85 à 100 %, STAB ×1,5, efficacité des types (`type_efficacy`), au moins 1 dégât hors immunité. Une attaque sans précision ne rate jamais.
+- **PP et Lutte** : chaque attaque consomme 1 PP. Sans PP, le Pokémon utilise Lutte (puissance 50, sans type, recul d'un quart de ses PV max).
+- **Fin** : le combat se termine quand un camp n'a plus de Pokémon ; match nul si les deux derniers tombent au même tour.
+- **Pas encore gérés** : effets secondaires et statuts, modifications de stats, attaques multi-coups, drain, recul (hors Lutte), attaques en deux tours, types variables (Téra Explosion reste de type Normal) et PV fixes de Munja.
 
 ## Choix techniques
 
@@ -120,5 +136,6 @@ Un Pokémon est sélectionnable dans sa forme par défaut (ni méga, ni forme al
 - **Tests de l'API utilisateurs** : PHPUnit + `ApiTestCase` (`api-platform/test`), Foundry pour les données, DAMA DoctrineTestBundle (chaque test est annulé par rollback). La recipe DAMA est « contrib » et ignorée par Flex (`allow-contrib` désactivé) : le bundle et l'extension PHPUnit sont enregistrés à la main comme le fait la recipe.
 - **Qualité PHP** (API utilisateurs) : PHPStan au niveau max (`phpstan.dist.neon`, extensions Symfony, Doctrine et PHPUnit, sur `src/` et `tests/`) et PHP-CS-Fixer en règles `@Symfony` (`.php-cs-fixer.dist.php`). L'option `allowNullablePropertyForRequiredField` est activée : les entités restent incomplètes jusqu'à la validation d'API Platform, et les colonnes NOT NULL font office de garde-fou. `phpstan/phpstan` est fixé en 2.3.0, car la 2.3.1 avait moins d'un jour à l'installation.
 - **Import PokeAPI** (`apps/battle-engine/src/import/`) : depuis les CSV du dépôt `PokeAPI/pokeapi`, épinglés sur un commit (`POKEAPI_REF` dans `source.ts`, à changer pour récupérer des données plus récentes). Ces CSV sont la source de la base de PokeAPI, et le script n'envoie qu'une trentaine de requêtes, contre plusieurs milliers avec l'API REST. Le script importe tous les Pokémon et leurs formes (méga, régionales, alternatives), les espèces, les types et la table des types, les statistiques, les natures, les talents de la série principale, les attaques avec leurs métadonnées de combat, les learnsets de toutes les versions, ainsi que les baies et les objets tenus (sélectionnés par catégorie, car les drapeaux `holdable` de PokeAPI sont incomplets). Les noms sont importés en français et en anglais, avec le texte d'effet court. Les entrées hors série principale (types inconnu et Obscur, attaques Obscures de Colosseum) sont exclues. L'import se fait en une seule transaction : `TRUNCATE` puis insertions par lots. En cas d'échec, l'import précédent reste en place. Le `TRUNCATE` est sans `CASCADE`, si bien qu'une future table qui référencerait ces données ferait échouer l'import au lieu d'être vidée. Limites de PokeAPI : 93 attaques récentes (Légendes Arceus, génération 9) n'ont pas de métadonnées de combat (colonnes à `NULL`), certains noms et textes manquent (colonnes à `NULL`), et les effets des talents et objets ne sont décrits qu'en texte.
+- **Combats** (battle-engine) : le moteur (`src/battle/`) est pur. Il reçoit l'état et une action, et rend le nouvel état. L'état est un document JSON (table `battles`, colonne `state`) qui copie les données de référence utiles : un nouvel import PokeAPI ne modifie pas un combat en cours, et la table n'a aucune clé étrangère vers les tables importées. Chaque mise à jour vérifie la colonne `version` (verrou optimiste) : de deux actions simultanées, la seconde reçoit 409. Le hasard vient d'un générateur à graine (mulberry32) dont l'état est stocké avec le combat. Un tour est donc rejouable, et les tests fixent chaque tirage. Les combats terminés ne sont pas encore purgés.
 - **Dépendance `csv-parse`** (battle-engine) : les CSV de PokeAPI contiennent des champs entre guillemets avec virgules et retours à la ligne.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.

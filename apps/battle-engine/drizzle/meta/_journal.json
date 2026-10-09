@@ -8,6 +8,13 @@
       "when": 1791547441037,
       "tag": "0000_pokeapi_battle_data",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791551976588,
+      "tag": "0001_battles",
+      "breakpoints": true
     }
   ]
 }

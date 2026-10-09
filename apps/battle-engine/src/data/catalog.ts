@@ -2,19 +2,34 @@
 // is selectable in its default form (no megas or alternate forms) when it
 // can learn at least one damaging move, in any game; status moves are left
 // out until the engine handles their effects.
-import type {
-  BattleStats,
-  LearnableMove,
-  Named,
-  PokemonDetail,
-  PokemonSummary,
+import {
+  type BattleStats,
+  type LearnableMove,
+  MAX_MOVES_PER_POKEMON,
+  type Named,
+  type PokemonDetail,
+  type PokemonSummary,
+  type TeamIssue,
+  type TeamMemberInput,
 } from "@pokebattle/shared";
 import { and, asc, eq, exists, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { names } from "../battle/engine.js";
-import type { BattleType, MoveInput } from "../battle/types.js";
+import type { Random } from "../battle/random.js";
+import type {
+  BattlerInput,
+  BattleType,
+  MoveInput,
+  TypeChart,
+} from "../battle/types.js";
 import type { DbClient } from "../db/client.js";
-import { moves, pokemon, pokemonMoves, types } from "../db/schema.js";
+import {
+  moves,
+  pokemon,
+  pokemonMoves,
+  typeEfficacy,
+  types,
+} from "../db/schema.js";
 
 const type1 = alias(types, "type1");
 const type2 = alias(types, "type2");
@@ -185,4 +200,124 @@ export async function findPokemonDetail(
     ...toSummary(entry),
     moves: (learnable.get(id) ?? []).map(toLearnableMove),
   };
+}
+
+function toBattlerInput(
+  entry: CatalogPokemon,
+  moves: MoveInput[],
+): BattlerInput {
+  return {
+    pokemonId: entry.id,
+    ...names(entry),
+    types: entry.types,
+    baseStats: entry.baseStats,
+    moves,
+  };
+}
+
+/**
+ * Checks the player's team against the catalog. The JSON Schema of the
+ * route already checked its shape (size, 1 to 4 distinct moves).
+ */
+export async function loadTeam(
+  db: DbClient,
+  team: TeamMemberInput[],
+): Promise<{ battlers: BattlerInput[] } | { issues: TeamIssue[] }> {
+  const pokemonIds = [...new Set(team.map((member) => member.pokemonId))];
+  const catalog = new Map(
+    (await findSelectablePokemon(db, pokemonIds)).map((entry) => [
+      entry.id,
+      entry,
+    ]),
+  );
+  const learnable = await findLearnableMoves(db, [...catalog.keys()]);
+
+  const battlers: BattlerInput[] = [];
+  const issues: TeamIssue[] = [];
+  team.forEach((member, slot) => {
+    const entry = catalog.get(member.pokemonId);
+    if (entry === undefined) {
+      issues.push({
+        slot,
+        reason: "pokemon-not-allowed",
+        pokemonId: member.pokemonId,
+      });
+      return;
+    }
+    const known = learnable.get(entry.id) ?? [];
+    const moves: MoveInput[] = [];
+    for (const moveId of member.moveIds) {
+      const move = known.find((candidate) => candidate.id === moveId);
+      if (move === undefined) {
+        issues.push({ slot, reason: "move-not-allowed", moveId });
+      } else {
+        moves.push(move);
+      }
+    }
+    battlers.push(toBattlerInput(entry, moves));
+  });
+  return issues.length > 0 ? { issues } : { battlers };
+}
+
+/**
+ * A random team: `size` selectable Pokémon (the same one may come twice),
+ * each with up to 4 random moves among those it can learn.
+ */
+export async function pickRandomTeam(
+  db: DbClient,
+  random: Random,
+  size: number,
+): Promise<BattlerInput[]> {
+  const candidates = await db
+    .select({ id: pokemon.id })
+    .from(pokemon)
+    .where(isSelectable(db))
+    .orderBy(asc(pokemon.id));
+  if (candidates.length === 0) {
+    throw new Error("no selectable Pokémon: is the PokeAPI data imported?");
+  }
+  const pickedIds = Array.from({ length: size }, () => {
+    const candidate = candidates[random.int(0, candidates.length - 1)];
+    if (candidate === undefined) {
+      throw new Error("random pick out of the candidates");
+    }
+    return candidate.id;
+  });
+  const catalog = new Map(
+    (await findSelectablePokemon(db, pickedIds)).map((entry) => [
+      entry.id,
+      entry,
+    ]),
+  );
+  const learnable = await findLearnableMoves(db, [...catalog.keys()]);
+
+  return pickedIds.map((id) => {
+    const entry = catalog.get(id);
+    if (entry === undefined) {
+      throw new Error(`Pokémon ${id} is no longer selectable`);
+    }
+    const moves = [...(learnable.get(id) ?? [])];
+    // Partial Fisher-Yates shuffle: the first moves become a random pick.
+    const count = Math.min(MAX_MOVES_PER_POKEMON, moves.length);
+    for (let index = 0; index < count; index++) {
+      const swap = random.int(index, moves.length - 1);
+      [moves[index], moves[swap]] = [
+        moves[swap] as MoveInput,
+        moves[index] as MoveInput,
+      ];
+    }
+    return toBattlerInput(entry, moves.slice(0, count));
+  });
+}
+
+export async function loadTypeChart(db: DbClient): Promise<TypeChart> {
+  const rows = await db.select().from(typeEfficacy);
+  const factors = new Map(
+    rows.map((row) => [
+      `${row.attackingTypeId}:${row.defendingTypeId}`,
+      row.damageFactor / 100,
+    ]),
+  );
+  return (attacking, defending) =>
+    factors.get(`${attacking}:${defending}`) ?? 1;
 }
