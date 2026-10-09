@@ -52,6 +52,7 @@ Le `Makefile` est le point d'entrée ; `make` (ou `make help`) liste toutes les 
 | `make ci`        | Les mêmes vérifications que la CI                                    |
 | `make db-generate` / `make db-migrate` | Migrations Drizzle du battle-engine             |
 | `make db-import` | Importe les données de combat PokeAPI dans la base du battle-engine (après `make db-migrate`) |
+| `make sprites`   | Télécharge les sprites manquants des Pokémon pour le web (après `make db-import`, battle-engine démarré) |
 | `make api-console ARGS="…"` / `make api-shell` | Console Symfony / shell dans le conteneur PHP |
 | `make api-migrate` | Migrations Doctrine (dev)                                          |
 
@@ -66,6 +67,10 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 ### Import des données PokeAPI
 
 `make db-import` télécharge les CSV de PokeAPI (environ 13 Mo) et remplace tout le contenu des tables de données de combat du battle-engine (environ 40 secondes). Pour lire des CSV locaux (par exemple le dossier `data/v2/csv` d'un clone de `PokeAPI/pokeapi`) : `pnpm --filter @pokebattle/battle-engine db:import --dir <dossier>`.
+
+### Sprites des Pokémon
+
+`make sprites` télécharge, depuis un commit figé de `PokeAPI/sprites`, les sprites de face et de dos de chaque Pokémon sélectionnable : le GIF animé de Showdown, ou le PNG fixe quand il n'existe pas. Ils vont dans `apps/web/public/sprites/` (environ 130 Mo, ignoré par git), servis par le web et copiés dans son build. Le script lit la liste des Pokémon via `GET /pokemon` du battle-engine (`BATTLE_ENGINE_URL`), garde les fichiers déjà présents et ne télécharge que les manquants (environ 1 minute la première fois). Sans sprites, l'interface affiche une Pokéball à la place.
 
 ## Services
 

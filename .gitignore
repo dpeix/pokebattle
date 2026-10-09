@@ -4,6 +4,8 @@ build/
 coverage/
 .turbo/
 .react-router/
+# Downloaded by `make sprites`
+apps/web/public/sprites/
 .env
 .env.*.local
 .DS_Store
