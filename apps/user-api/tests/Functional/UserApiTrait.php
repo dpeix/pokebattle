@@ -14,7 +14,7 @@ trait UserApiTrait
     private const string PASSWORD = 'correct-horse-battery';
 
     /**
-     * @return array<string, mixed> the created user as returned by the API
+     * @return array{'@id': string, id: string, email: string, roles: list<string>} the created user as returned by the API
      */
     private function register(Client $client, string $email, string $password = self::PASSWORD): array
     {
@@ -23,7 +23,10 @@ trait UserApiTrait
         ]);
         self::assertResponseStatusCodeSame(201);
 
-        return $response->toArray();
+        /** @var array{'@id': string, id: string, email: string, roles: list<string>} $user */
+        $user = $response->toArray();
+
+        return $user;
     }
 
     private function login(Client $client, string $email, string $password = self::PASSWORD): string
@@ -41,6 +44,9 @@ trait UserApiTrait
         ]);
         self::assertResponseIsSuccessful();
 
-        return $response->toArray();
+        /** @var array{token: string, refresh_token: string} $tokens */
+        $tokens = $response->toArray();
+
+        return $tokens;
     }
 }

@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use ApiPlatform\Test\ApiTestCase;
 use App\Repository\UserRepository;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Uid\Uuid;
 
 final class RegistrationTest extends ApiTestCase
 {
@@ -17,7 +18,7 @@ final class RegistrationTest extends ApiTestCase
         $user = $this->register(static::createClient(), 'ash@example.com');
 
         self::assertSame('ash@example.com', $user['email']);
-        self::assertArrayHasKey('id', $user);
+        self::assertTrue(Uuid::isValid($user['id']), 'the id is a UUID');
         self::assertArrayNotHasKey('password', $user);
         self::assertArrayNotHasKey('plainPassword', $user);
     }
