@@ -34,7 +34,7 @@ make setup   # une seule fois : dépendances, fichiers .env locaux, images Docke
 make dev     # toute la stack : web, battle-engine, bases PostgreSQL et API Symfony
 ```
 
-`make setup` peut être relancé sans risque : il ne remplace jamais un `.env` ou une clé existants. Il crée `apps/battle-engine/.env` (mot de passe Postgres aléatoire) et ajoute `JWT_PASSPHRASE` dans `apps/user-api/.env.local`. Ces fichiers ne sont jamais commités.
+`make setup` peut être relancé sans risque : il ne remplace jamais un `.env` ou une clé existants. Il crée `apps/battle-engine/.env` (mot de passe Postgres aléatoire) et `apps/web/.env` (secret de session aléatoire), et ajoute `JWT_PASSPHRASE` dans `apps/user-api/.env.local`. Ces fichiers ne sont jamais commités.
 
 `make dev` démarre les conteneurs en arrière-plan, puis le web et le battle-engine en mode watch au premier plan. Après Ctrl-C, les conteneurs restent démarrés : `make down` les arrête.
 
@@ -59,7 +59,7 @@ Les cibles `api-*` qui exécutent une commande dans le conteneur PHP supposent l
 
 Les scripts pnpm restent utilisables directement (le `Makefile` les appelle) : `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format`, `pnpm db:up`, `pnpm db:down`, `pnpm api:up`, `pnpm api:down`, `pnpm api:test`. Drizzle Studio : `pnpm --filter @pokebattle/battle-engine db:studio`.
 
-`pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) : le setup global de Vitest (`apps/battle-engine/test/global-setup.ts`) y applique d'abord les migrations Drizzle en attente, y compris sur la base de dev. Les tests qui lisent les données de combat importent les CSV de `test/fixtures/pokeapi` dans une transaction annulée à la fin : la base de dev n'est jamais modifiée, et les fichiers de test s'exécutent l'un après l'autre (`fileParallelism: false`), car le `TRUNCATE` de l'import verrouille les tables jusqu'au rollback. Les tests PHP passent par `make api-test`.
+`pnpm test` (Turborepo) ne lance que les tests Node (Vitest) : ceux du web n'ont besoin de rien, ceux du battle-engine ont besoin de sa base (`make db-up`) : le setup global de Vitest (`apps/battle-engine/test/global-setup.ts`) y applique d'abord les migrations Drizzle en attente, y compris sur la base de dev. Les tests qui lisent les données de combat importent les CSV de `test/fixtures/pokeapi` dans une transaction annulée à la fin : la base de dev n'est jamais modifiée, et les fichiers de test s'exécutent l'un après l'autre (`fileParallelism: false`), car le `TRUNCATE` de l'import verrouille les tables jusqu'au rollback. Les tests PHP passent par `make api-test`.
 
 Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
 
@@ -71,7 +71,7 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 
 | Service         | URL en dev               | Détails                                                     |
 | --------------- | ------------------------ | ----------------------------------------------------------- |
-| `web`           | http://localhost:5173    | Interface utilisateur (`apps/web/app/routes.ts` pour les routes) |
+| `web`           | http://localhost:5173    | Interface utilisateur (`apps/web/app/routes.ts` pour les routes) : `/team` pour composer son équipe, `/battle` pour le combat en cours ; variables : voir `apps/web/.env.example` |
 | `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable), endpoints du simulateur ci-dessous ; variables : voir `apps/battle-engine/.env.example` |
 | `user-api`      | https://localhost        | API Symfony 8 ; certificat TLS local auto-signé à accepter. Commandes : `docker compose exec php bin/console …` dans `apps/user-api` |
 | PostgreSQL de l'API utilisateurs | port hôte aléatoire (`docker compose port database 5432`) | Service `database` de `apps/user-api/compose.yaml`, utilisé uniquement par l'API Symfony |
@@ -130,7 +130,7 @@ Combat simple, en 6 contre 6, contre un bot. Le bot choisit une attaque au hasar
 - **symfony-docker** pour l'API utilisateurs : copié depuis `dunglas/symfony-docker` au commit `4227566` (2026-08-31, sans son historique git), squelette Symfony 8.1 généré par le conteneur au premier démarrage. Sa documentation amont est dans `apps/user-api/README.md` et `apps/user-api/docs/`. Sa CI de template (`.github/`, qui ne s'exécutait pas depuis un sous-dossier) a été remplacée par la CI du dépôt.
 - **FrankenPHP fixé en 1.12** (`apps/user-api/Dockerfile`) : la 1.13 embarque Mercure 1.0, incompatible avec la config Mercure du template (le conteneur redémarre en boucle, dunglas/symfony-docker#968). À retirer quand la PR amont #969 sera publiée et reportée ici.
 - **API utilisateurs** : API Platform 5 + Doctrine ORM (PostgreSQL), SecurityBundle, LexikJWTAuthenticationBundle, NelmioCorsBundle. La passphrase JWT est dans `.env.local` (non commité) ; `.env.test` contient une passphrase de test non sensible car Symfony ne charge pas `.env.local` en environnement de test.
-- **Front en BFF** : le serveur React Router appellera l'API utilisateurs et gardera les tokens dans sa propre session (cookie httpOnly) ; Symfony renvoie donc les tokens dans le corps JSON, sans cookie, et le navigateur n'appelle pas l'API directement.
+- **Front en BFF** : le serveur React Router appellera l'API utilisateurs et gardera les tokens dans sa propre session (cookie httpOnly) ; Symfony renvoie donc les tokens dans le corps JSON, sans cookie, et le navigateur n'appelle pas l'API directement. Il appelle de même le battle-engine (`app/battle-engine.server.ts`, URL dans `BATTLE_ENGINE_URL`). En attendant les comptes, la session (`app/session.server.ts`, cookie signé par `SESSION_SECRET`, httpOnly, `SameSite=Lax`) garde la dernière équipe validée par le battle-engine et l'id du combat en cours. Le serveur web ne fait aucun calcul de combat : il relaie les actions et met en forme le journal (`app/battle-log.ts`). Comme le serveur de dev de Vite ne charge pas `.env` dans `process.env`, `app/env.server.ts` le lit lui-même au premier besoin.
 - **Utilisateurs** : identifiant UUID v7 (non énumérable), email normalisé en minuscules (unicité insensible à la casse), mot de passe haché par `App\State\UserPasswordHasher`, rôles ignorés à l'inscription.
 - **Refresh tokens** : GesdinetJWTRefreshTokenBundle v3, usage unique (rotation) et stockage haché en base. Sa détection de réutilisation (`reuse_detection`) n'est pas activée : en 3.0.0 elle empêche le conteneur de se construire (markitosgv/JWTRefreshTokenBundle#434) et reste inopérante avec les tokens hachés (#433). Sa recipe Flex est « contrib », la configuration (`config/packages/gesdinet_jwt_refresh_token.yaml`) est écrite à la main.
 - **Tests de l'API utilisateurs** : PHPUnit + `ApiTestCase` (`api-platform/test`), Foundry pour les données, DAMA DoctrineTestBundle (chaque test est annulé par rollback). La recipe DAMA est « contrib » et ignorée par Flex (`allow-contrib` désactivé) : le bundle et l'extension PHPUnit sont enregistrés à la main comme le fait la recipe.

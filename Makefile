@@ -7,6 +7,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 ENGINE_DIR := apps/battle-engine
+WEB_DIR := apps/web
 API_DIR := apps/user-api
 API_COMPOSE := cd $(API_DIR) && docker compose
 API_EXEC := $(API_COMPOSE) exec -T php
@@ -32,6 +33,10 @@ env-files: ## Create local env files with random secrets, keeping existing ones
 	@if [ ! -f $(ENGINE_DIR)/.env ]; then \
 		sed "s/change-me/$$(openssl rand -hex 16)/g" $(ENGINE_DIR)/.env.example > $(ENGINE_DIR)/.env; \
 		echo "Created $(ENGINE_DIR)/.env"; \
+	fi
+	@if [ ! -f $(WEB_DIR)/.env ]; then \
+		sed "s/change-me/$$(openssl rand -hex 32)/g" $(WEB_DIR)/.env.example > $(WEB_DIR)/.env; \
+		echo "Created $(WEB_DIR)/.env"; \
 	fi
 	@if ! grep -qs '^JWT_PASSPHRASE=.' $(API_DIR)/.env.local; then \
 		printf 'JWT_PASSPHRASE=%s\n' "$$(openssl rand -hex 32)" >> $(API_DIR)/.env.local; \
