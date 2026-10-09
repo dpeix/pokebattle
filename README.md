@@ -87,7 +87,18 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 | PostgreSQL de l'API utilisateurs | port hôte aléatoire (`docker compose port database 5432`) | Service `database` de `apps/user-api/compose.yaml`, utilisé uniquement par l'API Symfony |
 | PostgreSQL du battle-engine | localhost:5433 | Conteneur `apps/battle-engine/compose.yaml`, utilisé uniquement par le battle-engine |
 
-## Choix techniques
+### Authentification (API utilisateurs)
+
+| Endpoint                  | Accès    | Rôle                                                              |
+| ------------------------- | -------- | ----------------------------------------------------------------- |
+| `POST /api/users`         | public   | Inscription : `{ "email", "password" }` (8 caractères min.) → 201 |
+| `POST /api/login_check`   | public   | Login : `{ "email", "password" }` → `{ "token" }` (JWT, 15 min)   |
+| `GET /api/me`             | JWT      | Utilisateur connecté                                              |
+| `GET /api/users/{id}`     | JWT      | Uniquement son propre compte (403 sinon)                         |
+
+Le JWT s'envoie dans l'en-tête `Authorization: Bearer <token>`. Le login est limité à 5 échecs par minute (email + IP). Documentation OpenAPI : https://localhost/api/docs.
+
+
 
 - **pnpm workspaces + Turborepo** : orchestration et cache des tâches `build`, `dev`, `typecheck`, `test`.
 - **Biome** : lint et formatage du code TypeScript/JSON, configuré une seule fois à la racine (`biome.json`).
@@ -100,5 +111,7 @@ Les migrations Doctrine sont appliquées automatiquement au démarrage du conten
 - **symfony-docker** pour l'API utilisateurs : copié depuis `dunglas/symfony-docker` au commit `4227566` (2026-08-31, sans son historique git), squelette Symfony 8.1 généré par le conteneur au premier démarrage. Sa documentation amont est dans `apps/user-api/README.md` et `apps/user-api/docs/` ; ses fichiers `.github/` ne sont pas exécutés depuis ce sous-dossier.
 - **FrankenPHP fixé en 1.12** (`apps/user-api/Dockerfile`) : la 1.13 embarque Mercure 1.0, incompatible avec la config Mercure du template (le conteneur redémarre en boucle, dunglas/symfony-docker#968). À retirer quand la PR amont #969 sera publiée et reportée ici.
 - **API utilisateurs** : API Platform 5 + Doctrine ORM (PostgreSQL), SecurityBundle, LexikJWTAuthenticationBundle, NelmioCorsBundle. La passphrase JWT est dans `.env.local` (non commité) ; `.env.test` contient une passphrase de test non sensible car Symfony ne charge pas `.env.local` en environnement de test.
+- **Front en BFF** : le serveur React Router appellera l'API utilisateurs et gardera les tokens dans sa propre session (cookie httpOnly) ; Symfony renvoie donc les tokens dans le corps JSON, sans cookie, et le navigateur n'appelle pas l'API directement.
+- **Utilisateurs** : identifiant UUID v7 (non énumérable), email normalisé en minuscules (unicité insensible à la casse), mot de passe haché par `App\State\UserPasswordHasher`, rôles ignorés à l'inscription.
 - **Tests de l'API utilisateurs** : PHPUnit + `ApiTestCase` (`api-platform/test`), Foundry pour les données, DAMA DoctrineTestBundle (chaque test est annulé par rollback). La recipe DAMA est « contrib » et ignorée par Flex (`allow-contrib` désactivé) : le bundle et l'extension PHPUnit sont enregistrés à la main comme le fait la recipe.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.
