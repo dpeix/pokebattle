@@ -81,11 +81,17 @@ describe("createBattleState", () => {
       {
         type: "switch",
         side: "player",
+        slot: 0,
+        pokemonId: 25,
+        hpPercent: 100,
         pokemon: { identifier: "pikachu", nameFr: null, nameEn: null },
       },
       {
         type: "switch",
         side: "opponent",
+        slot: 0,
+        pokemonId: 6,
+        hpPercent: 100,
         pokemon: { identifier: "charizard", nameFr: null, nameEn: null },
       },
     ]);
@@ -176,6 +182,31 @@ describe("applyAction: turn order", () => {
     expect(after.player.team[1]?.hp).toBeLessThan(
       after.player.team[1]?.stats.hp ?? 0,
     );
+  });
+
+  it("logs the slot and HP of the Pokémon sent out", () => {
+    const state = newBattle([SLOW, PIKACHU], [FAST]);
+    const pikachu = state.player.team[1];
+    if (pikachu === undefined) {
+      throw new Error("missing Pokémon");
+    }
+    pikachu.hp = 55;
+
+    const after = applyAction(
+      state,
+      { type: "switch", slot: 1 },
+      typeChart,
+      constantRandom(0.99),
+    );
+
+    expect(newEvents(state, after)[1]).toEqual({
+      type: "switch",
+      side: "player",
+      slot: 1,
+      pokemonId: 25,
+      hpPercent: 50,
+      pokemon: { identifier: "pikachu", nameFr: null, nameEn: null },
+    });
   });
 
   it("uses one PP per move, for both sides", () => {
@@ -455,6 +486,64 @@ describe("toBattleView", () => {
     });
     expect(view.opponent.active).not.toHaveProperty("moves");
     expect(view.opponent.active).not.toHaveProperty("hp");
+  });
+
+  it("reveals the opponent's active Pokémon only at the start", () => {
+    const view = toBattleView(
+      "battle-id",
+      newBattle([PIKACHU], [CHARIZARD, PIKACHU]),
+    );
+
+    expect(view.opponent.revealed).toEqual([view.opponent.active]);
+  });
+
+  it("keeps the opponent's fainted Pokémon revealed after its replacement", () => {
+    const state = newBattle([STRONG], [FRAGILE, CHARIZARD, SLOW]);
+    const after = applyAction(
+      state,
+      { type: "move", moveId: TACKLE.id },
+      typeChart,
+      constantRandom(0.99),
+    );
+    const replacement = after.opponent.team[after.opponent.active];
+
+    const view = toBattleView("battle-id", after);
+
+    expect(view.opponent.revealed).toMatchObject([
+      { identifier: "fragile", hpPercent: 0 },
+      { identifier: replacement?.identifier, hpPercent: 100 },
+    ]);
+    expect(view.opponent.revealed[0]).not.toHaveProperty("moves");
+  });
+
+  it("reveals the same Pokémon once however often it comes in", () => {
+    const state = newBattle([PIKACHU], [CHARIZARD]);
+    const [, opponentSwitch] = state.log;
+    if (opponentSwitch === undefined) {
+      throw new Error("missing event");
+    }
+    state.log.push(opponentSwitch);
+
+    expect(toBattleView("battle-id", state).opponent.revealed).toHaveLength(1);
+  });
+
+  it("reveals only the active Pokémon of a battle logged without slots", () => {
+    // Battles stored before the switch events had a slot.
+    const state = newBattle([PIKACHU], [CHARIZARD, PIKACHU]);
+    state.log = state.log.map((event) =>
+      event.type === "switch"
+        ? ({
+            type: "switch",
+            side: event.side,
+            pokemon: event.pokemon,
+          } as BattleEvent)
+        : event,
+    );
+    state.opponent.active = 1;
+
+    expect(toBattleView("battle-id", state).opponent.revealed).toMatchObject([
+      { identifier: "pikachu" },
+    ]);
   });
 
   it("tells when the active Pokémon must struggle", () => {

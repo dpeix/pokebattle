@@ -32,11 +32,25 @@ describe("describeEvent", () => {
   it.each<[BattleEvent, string]>([
     [{ type: "turn-start", turn: 3 }, "Tour 3"],
     [
-      { type: "switch", side: "player", pokemon: pikachu },
+      {
+        type: "switch",
+        side: "player",
+        slot: 0,
+        pokemonId: 25,
+        pokemon: pikachu,
+        hpPercent: 100,
+      },
       "Vous envoyez Pikachu !",
     ],
     [
-      { type: "switch", side: "opponent", pokemon: charizard },
+      {
+        type: "switch",
+        side: "opponent",
+        slot: 0,
+        pokemonId: 6,
+        pokemon: charizard,
+        hpPercent: 100,
+      },
       "L'adversaire envoie Dracaufeu !",
     ],
     [

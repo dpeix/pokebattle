@@ -101,7 +101,16 @@ export interface OpponentPokemonView extends Named {
 
 export type BattleEvent =
   | { type: "turn-start"; turn: number }
-  | { type: "switch"; side: BattleSide; pokemon: Named }
+  | {
+      type: "switch";
+      side: BattleSide;
+      /** Slot of the Pokémon sent out in its team. */
+      slot: number;
+      pokemonId: number;
+      pokemon: Named;
+      /** HP of the Pokémon sent out, rounded up like `damage`. */
+      hpPercent: number;
+    }
   | { type: "move"; side: BattleSide; pokemon: Named; move: Named }
   | { type: "miss"; side: BattleSide; pokemon: Named }
   /** The target (`side`) is immune to the move's type. */
@@ -135,6 +144,11 @@ export interface BattleView {
   };
   opponent: {
     active: OpponentPokemonView;
+    /**
+     * The Pokémon that have been sent out, in order of appearance, the
+     * active one and the fainted ones (0 %) included; the others stay hidden.
+     */
+    revealed: OpponentPokemonView[];
     /** Pokémon not fainted yet, the active one included. */
     remaining: number;
     teamSize: number;

@@ -1,10 +1,15 @@
-import type { BattleMoveView, BattleView } from "@pokebattle/shared";
+import type {
+  BattleMoveView,
+  BattleView,
+  OpponentPokemonView,
+} from "@pokebattle/shared";
 import { activeBattler, hpPercent, names } from "./engine.js";
-import type { BattleMove, BattleState } from "./types.js";
+import type { BattleMove, Battler, BattleState } from "./types.js";
 
 /**
- * The player's view of the battle. Only the opponent's active Pokémon is
- * shown, with its HP as a percentage, as in the games.
+ * The player's view of the battle. Of the opponent's team, only the
+ * Pokémon already sent out are shown, with their HP as a percentage, as in
+ * the games.
  */
 export function toBattleView(id: string, state: BattleState): BattleView {
   const playerActive = activeBattler(state.player);
@@ -28,17 +33,43 @@ export function toBattleView(id: string, state: BattleState): BattleView {
       mustStruggle: playerActive.moves.every((move) => move.pp === 0),
     },
     opponent: {
-      active: {
-        ...names(opponentActive),
-        pokemonId: opponentActive.pokemonId,
-        types: opponentActive.types.map(names),
-        hpPercent: hpPercent(opponentActive),
-      },
+      active: opponentView(opponentActive),
+      revealed: revealedSlots(state).flatMap((slot) => {
+        const battler = state.opponent.team[slot];
+        return battler === undefined ? [] : [opponentView(battler)];
+      }),
       remaining: state.opponent.team.filter((battler) => battler.hp > 0).length,
       teamSize: state.opponent.team.length,
     },
     log: state.log,
   };
+}
+
+function opponentView(battler: Battler): OpponentPokemonView {
+  return {
+    ...names(battler),
+    pokemonId: battler.pokemonId,
+    types: battler.types.map(names),
+    hpPercent: hpPercent(battler),
+  };
+}
+
+/** Slots of the opponent's Pokémon sent out so far, in order of appearance. */
+function revealedSlots(state: BattleState): number[] {
+  const slots = new Set<number>();
+  for (const event of state.log) {
+    // Battles stored before switch events had a slot only reveal the
+    // active Pokémon, added below.
+    if (
+      event.type === "switch" &&
+      event.side === "opponent" &&
+      Number.isInteger(event.slot)
+    ) {
+      slots.add(event.slot);
+    }
+  }
+  slots.add(state.opponent.active);
+  return [...slots];
 }
 
 function moveView(move: BattleMove): BattleMoveView {

@@ -184,9 +184,10 @@ export const battleViewSchema = {
     },
     opponent: {
       type: "object",
-      required: ["active", "remaining", "teamSize"],
+      required: ["active", "revealed", "remaining", "teamSize"],
       properties: {
         active: opponentPokemonSchema,
+        revealed: { type: "array", items: opponentPokemonSchema },
         remaining: { type: "integer" },
         teamSize: { type: "integer" },
       },

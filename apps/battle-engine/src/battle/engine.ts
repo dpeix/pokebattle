@@ -65,10 +65,14 @@ function opposite(side: BattleSide): BattleSide {
 
 function switchIn(state: BattleState, side: BattleSide, slot: number): void {
   state[side].active = slot;
+  const battler = activeBattler(state[side]);
   state.log.push({
     type: "switch",
     side,
-    pokemon: names(activeBattler(state[side])),
+    slot,
+    pokemonId: battler.pokemonId,
+    pokemon: names(battler),
+    hpPercent: hpPercent(battler),
   });
 }
 

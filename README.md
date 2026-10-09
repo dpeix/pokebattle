@@ -98,7 +98,7 @@ API sans authentification, appelée uniquement par le serveur web (BFF). Contrat
 | `GET /pokemon`      | Pokémon sélectionnables pour une équipe (environ 1 000, sans pagination) : noms, types, stats de base |
 | `GET /pokemon/{id}` | Un Pokémon sélectionnable et les attaques à dégâts qu'il peut apprendre (404 sinon) |
 | `POST /battles`     | `{ "team": [{ "pokemonId", "moveIds" }] }` (6 membres, 1 à 4 attaques distinctes chacun) → 201 et la vue du combat contre un bot à équipe aléatoire ; 400 avec `issues` (emplacement et raison) si un Pokémon ou une attaque n'est pas autorisé |
-| `GET /battles/{id}` | Vue du combat côté joueur (404 si inconnu) |
+| `GET /battles/{id}` | Vue du combat côté joueur : toute son équipe, et de l'équipe adverse seulement les Pokémon déjà envoyés (`opponent.revealed`) ; 404 si inconnu |
 | `POST /battles/{id}/actions` | `{ "type": "move", "moveId" }`, `{ "type": "switch", "slot" }` ou `{ "type": "struggle" }` → vue après l'action ; 400 si les règles l'interdisent, 409 si le combat est terminé ou si une autre action a été enregistrée entre-temps |
 
 Un Pokémon est sélectionnable dans sa forme par défaut (ni méga, ni forme alternative ou de combat) s'il peut apprendre au moins une attaque à dégâts, tous jeux confondus. Les attaques de statut ou sans puissance fixe sont exclues tant que le moteur ne gère pas leurs effets.
