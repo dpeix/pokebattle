@@ -1,0 +1,33 @@
+item_id,local_language_id,short_effect,effect
+17,5,Soigne 20 PV.,"Utilisé sur un Pokémon allié
+:   Restaure 20 PV."
+17,9,Restores 20 HP.,"Used on a friendly Pokémon
+:   Restores 20 HP."
+135,5,Tenu: Consommé à 1/2 des PV max pour regagner 1/4 des PV max.,"Tenu au combat
+:   Quand le porteur a 1/2 de ses PV max restants ou moins, cela consomme cet objet pour restaurer 1/4 de ses PV max.
+
+Utilisé sur un Pokémon de l'équipe
+:   Restaure 1/4 des PV max du Pokémon."
+135,9,Held: Consumed at 1/2 max HP to recover 1/4 max HP.,"Held in battle
+:   When the holder has 1/2 its max HP remaining or less, it consumes this item to restore 1/4 its max HP.
+
+Used on a party Pokémon
+:   Restores 1/4 the Pokémon’s max HP."
+141,5,Utilisé pour créer des Pokéblocs et Poffins.,Aucun effet; seulement utilise pour planter et cuisiner.
+141,9,Used for creating PokéBlocks and Poffins.,No effect; only useful for planting and cooking.
+197,5,"Tenu: Augmente l'Attaque de 50%, mais restreint le porteur à seulement une capacité.","Tenu au combat
+:   Le porteur a 1.5× son Attaque.  Quand le porteur tente d'utiliser une capacité, toutes ses autres capacités sont inutilisables jusqu'à ce qu'il quitte le terrain ou perde cet objet.
+
+    La restriction prend fin même si cet objet est échangé avec un autre objet Choix
+via Tour de Magie ou Passe-Passe."
+197,9,"Held: Increases Attack by 50%, but restricts the holder to only one move.","Held in battle
+:   Holder has 1.5× its Attack.  When the holder attempts to use a move, all its other moves are disabled until it leaves battle or loses this item.
+
+    The restriction ends even if this item is swapped for another Choice item
+via Trick or Switcheroo."
+211,5,Tenu: Restaure 1/16 (6.25%) des PV max du porteur à la fin de chaque tour.,Tenu: Soigne 1/16 des PV max du porteur à la fin de chaque tour.
+211,9,Held: Restores 1/16 (6.25%) holder’s max HP at the end of each turn.,Held: Heals the holder by 1/16 its max HP at the end of each turn.
+699,5,Tenu: Permet à Dracaufeu de Méga-Évoluer en Méga-Dracaufeu X.,Tenu: Permet à Dracaufeu de Méga-Évoluer en Méga-Dracaufeu X.
+699,9,Held: Allows Charizard to Mega Evolve into Mega Charizard X.,Held: Allows Charizard to Mega Evolve into Mega Charizard X.
+723,5,Tenu: Consommé quand touché par une attaque de type Fée super efficace pour diviser par deux les dégâts.,Tenu: Consommé quand touché par une attaque de type Fée super efficace pour diviser par deux les dégâts.
+723,9,Held: Consumed when struck by a super-effective Fairy-type attack to halve the damage.,Held: Consumed when struck by a super-effective Fairy-type attack to halve the damage.

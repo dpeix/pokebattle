@@ -13,10 +13,12 @@
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:import": "tsx src/import/cli.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@pokebattle/shared": "workspace:*",
+    "csv-parse": "^7.0.3",
     "drizzle-orm": "^0.45.3",
     "fastify": "^5.12.5",
     "fastify-plugin": "^5.1.0",

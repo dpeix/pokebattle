@@ -14,7 +14,7 @@ API_PROD_IMAGE := pokebattle-user-api-prod-check
 
 .PHONY: help setup install env-files dev up down ps logs db-logs \
 	lint format typecheck build test audit ci \
-	db-up db-down db-generate db-migrate \
+	db-up db-down db-generate db-migrate db-import \
 	api-build api-up api-down api-jwt api-test-db api-migrate api-test \
 	api-lint api-format api-check api-prod-image api-shell api-console
 
@@ -93,6 +93,9 @@ db-generate: ## Generate a Drizzle migration from the schema
 
 db-migrate: ## Apply the Drizzle migrations
 	pnpm --filter @pokebattle/battle-engine db:migrate
+
+db-import: ## Import the PokeAPI battle data (replaces the previous import)
+	pnpm --filter @pokebattle/battle-engine db:import
 
 ## User API (Symfony)
 

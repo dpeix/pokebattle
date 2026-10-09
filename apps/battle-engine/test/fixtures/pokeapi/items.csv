@@ -1,0 +1,9 @@
+id,identifier,category_id,cost,fling_power,fling_effect_id
+17,potion,27,200,30,
+135,sitrus-berry,3,80,10,3
+141,razz-berry,8,200,10,
+197,choice-band,13,4000,10,
+211,leftovers,12,4000,10,
+699,charizardite-x,44,0,80,
+723,roseli-berry,7,80,10,
+2279,roseli-berry,7,200,10,

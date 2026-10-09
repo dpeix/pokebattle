@@ -1,0 +1,7 @@
+id,identifier,form_identifier,pokemon_id,introduced_in_version_group_id,is_default,is_battle_only,is_mega,form_order,order
+1,bulbasaur,,1,28,1,0,0,1,1
+6,charizard,,6,28,1,0,0,1,7
+25,pikachu,,25,28,1,0,0,1,36
+1007,koraidon-apex-build,apex-build,1007,25,1,0,0,1,1406
+10134,charizard-mega-x,mega-x,10034,15,1,1,1,2,8
+10433,koraidon-limited-build,limited-build,10264,25,0,0,0,2,1367

@@ -1,0 +1,11 @@
+move_effect_id,local_language_id,short_effect,effect
+1,5,Inflige des dégâts réguliers avec aucun effet additionnel.,Inflige des dégats réguliers.
+1,9,Inflicts regular damage with no additional effect.,Inflicts regular damage.
+5,5,A une chance de brûler la cible.,Inflige des dégats réguliers.  A une chance de brûler la cible.
+5,9,Has a chance to burn the target.,Inflicts regular damage.  Has a chance to burn the target.
+7,5,A une chance de paralyser la cible.,Inflige des dégats réguliers.  A une chance de paralyser la cible.
+7,9,Has a chance to paralyze the target.,Inflicts regular damage.  Has a chance to paralyze the target.
+51,5,Augmente l'Attaque du lanceur de deux niveaux.,Augmente l'Attaque du lanceur de deux niveaux.
+51,9,Raises the user’s Attack by two stages.,Raises the user’s Attack by two stages.
+10001,5,A une chance augmentée de coup critique en Mode Hyper.,Inflige des dégâts réguliers.  Le taux de coups critiques du lanceur est un niveau plus haut en utilisant cette capacité en étant en Mode Hyper.
+10001,9,Has an increased chance for a critical hit in Hyper Mode.,Inflicts regular damage.  User’s critical hit rate is one level higher when using this move while in hyper mode.

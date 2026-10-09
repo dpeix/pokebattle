@@ -46,6 +46,7 @@ Le `Makefile` est le point d'entrée ; `make` (ou `make help`) liste toutes les 
 | `make test`      | Tests Node (Vitest) et PHP (PHPUnit), conteneurs démarrés au besoin  |
 | `make ci`        | Les mêmes vérifications que la CI                                    |
 | `make db-generate` / `make db-migrate` | Migrations Drizzle du battle-engine             |
+| `make db-import` | Importe les données de combat PokeAPI dans la base du battle-engine (après `make db-migrate`) |
 | `make api-console ARGS="…"` / `make api-shell` | Console Symfony / shell dans le conteneur PHP |
 | `make api-migrate` | Migrations Doctrine (dev)                                          |
 
@@ -56,6 +57,10 @@ Les scripts pnpm restent utilisables directement (le `Makefile` les appelle) : `
 `pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) : le setup global de Vitest (`apps/battle-engine/test/global-setup.ts`) y applique d'abord les migrations Drizzle en attente, y compris sur la base de dev ; les tests PHP passent par `make api-test`.
 
 Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
+
+### Import des données PokeAPI
+
+`make db-import` télécharge les CSV de PokeAPI (environ 13 Mo) et remplace tout le contenu des tables de données de combat du battle-engine (environ 40 secondes). Pour lire des CSV locaux (par exemple le dossier `data/v2/csv` d'un clone de `PokeAPI/pokeapi`) : `pnpm --filter @pokebattle/battle-engine db:import --dir <dossier>`.
 
 ## Services
 
@@ -97,4 +102,6 @@ Le JWT (valable 15 min) s'envoie dans l'en-tête `Authorization: Bearer <token>`
 - **Refresh tokens** : GesdinetJWTRefreshTokenBundle v3, usage unique (rotation) et stockage haché en base. Sa détection de réutilisation (`reuse_detection`) n'est pas activée : en 3.0.0 elle empêche le conteneur de se construire (markitosgv/JWTRefreshTokenBundle#434) et reste inopérante avec les tokens hachés (#433). Sa recipe Flex est « contrib », la configuration (`config/packages/gesdinet_jwt_refresh_token.yaml`) est écrite à la main.
 - **Tests de l'API utilisateurs** : PHPUnit + `ApiTestCase` (`api-platform/test`), Foundry pour les données, DAMA DoctrineTestBundle (chaque test est annulé par rollback). La recipe DAMA est « contrib » et ignorée par Flex (`allow-contrib` désactivé) : le bundle et l'extension PHPUnit sont enregistrés à la main comme le fait la recipe.
 - **Qualité PHP** (API utilisateurs) : PHPStan au niveau max (`phpstan.dist.neon`, extensions Symfony, Doctrine et PHPUnit, sur `src/` et `tests/`) et PHP-CS-Fixer en règles `@Symfony` (`.php-cs-fixer.dist.php`). L'option `allowNullablePropertyForRequiredField` est activée : les entités restent incomplètes jusqu'à la validation d'API Platform, et les colonnes NOT NULL font office de garde-fou. `phpstan/phpstan` est fixé en 2.3.0, car la 2.3.1 avait moins d'un jour à l'installation.
+- **Import PokeAPI** (`apps/battle-engine/src/import/`) : depuis les CSV du dépôt `PokeAPI/pokeapi`, épinglés sur un commit (`POKEAPI_REF` dans `source.ts`, à changer pour récupérer des données plus récentes). Ces CSV sont la source de la base de PokeAPI, et le script n'envoie qu'une trentaine de requêtes, contre plusieurs milliers avec l'API REST. Le script importe tous les Pokémon et leurs formes (méga, régionales, alternatives), les espèces, les types et la table des types, les statistiques, les natures, les talents de la série principale, les attaques avec leurs métadonnées de combat, les learnsets de toutes les versions, ainsi que les baies et les objets tenus (sélectionnés par catégorie, car les drapeaux `holdable` de PokeAPI sont incomplets). Les noms sont importés en français et en anglais, avec le texte d'effet court. Les entrées hors série principale (types inconnu et Obscur, attaques Obscures de Colosseum) sont exclues. L'import se fait en une seule transaction : `TRUNCATE` puis insertions par lots. En cas d'échec, l'import précédent reste en place. Le `TRUNCATE` est sans `CASCADE`, si bien qu'une future table qui référencerait ces données ferait échouer l'import au lieu d'être vidée. Limites de PokeAPI : 93 attaques récentes (Légendes Arceus, génération 9) n'ont pas de métadonnées de combat (colonnes à `NULL`), certains noms et textes manquent (colonnes à `NULL`), et les effets des talents et objets ne sont décrits qu'en texte.
+- **Dépendance `csv-parse`** (battle-engine) : les CSV de PokeAPI contiennent des champs entre guillemets avec virgules et retours à la ligne.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.

@@ -1,0 +1,13 @@
+pokemon_species_id,local_language_id,name,genus
+1,1,フシギダネ,たねポケモン
+1,5,Bulbizarre,Pokémon Graine
+1,9,Bulbasaur,Seed Pokémon
+6,1,リザードン,かえんポケモン
+6,5,Dracaufeu,Pokémon Flamme
+6,9,Charizard,Flame Pokémon
+25,1,ピカチュウ,ねずみポケモン
+25,5,Pikachu,Pokémon Souris
+25,9,Pikachu,Mouse Pokémon
+1007,1,コライドン,パラドックスポケモン
+1007,5,Koraidon,Paradoxe
+1007,9,Koraidon,Paradox Pokémon

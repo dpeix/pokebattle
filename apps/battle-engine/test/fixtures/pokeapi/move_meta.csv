@@ -1,0 +1,6 @@
+move_id,meta_category_id,meta_ailment_id,min_hits,max_hits,min_turns,max_turns,drain,healing,crit_rate,ailment_chance,flinch_chance,stat_chance
+14,2,0,,,,,0,0,0,0,0,0
+33,0,0,,,,,0,0,0,0,0,0
+53,4,4,,,,,0,0,0,10,0,0
+85,4,1,,,,,0,0,0,10,0,0
+337,0,0,,,,,0,0,0,0,0,0

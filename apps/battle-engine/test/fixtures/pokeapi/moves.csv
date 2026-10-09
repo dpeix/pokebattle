@@ -1,0 +1,8 @@
+id,identifier,generation_id,type_id,power,pp,accuracy,priority,target_id,damage_class_id,effect_id,effect_chance,contest_type_id,contest_effect_id,super_contest_effect_id
+14,swords-dance,1,1,,20,,0,7,1,51,,2,32,11
+33,tackle,1,1,40,35,100,0,10,2,1,,5,1,5
+53,flamethrower,1,10,90,15,100,0,10,3,5,10,2,1,17
+85,thunderbolt,1,13,90,15,100,0,10,3,7,10,1,1,17
+337,dragon-claw,3,16,80,15,100,0,10,2,1,,1,23,17
+851,tera-blast,9,1,80,10,100,0,10,3,,,,,
+10001,shadow-rush,3,10002,55,,100,0,10,2,10001,,,,

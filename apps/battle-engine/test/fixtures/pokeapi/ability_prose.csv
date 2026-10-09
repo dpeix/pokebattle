@@ -1,0 +1,38 @@
+ability_id,local_language_id,short_effect,effect
+9,5,A 30% de chances de paralyser le Pokémon attaquant en cas de contact.,"Quand une capacité crée un contact avec ce Pokémon, le lanceur de cette capacité a 30% de chances d'être paralysé.
+
+Les Pokémon immunisés aux capacités de type Électrik peuvent toujours être paralysés par ce talent.
+
+Monde extérieur: Si le Pokémon en tête d'équipe à ce talent, il y a 50% de chances que les rencontres soient avec un Pokémon de type Électrik, si possible."
+9,9,Has a 30% chance of paralyzing attacking Pokémon on contact.,"Whenever a move makes contact with this Pokémon, the move's user has a 30% chance of being paralyzed.
+
+Pokémon that are immune to Electric-type moves can still be paralyzed by this ability.
+
+Overworld: If the lead Pokémon has this ability, there is a 50% chance that encounters will be with an Electric Pokémon, if applicable."
+31,5,"Redirige les capacités Électrik à cible unique sur ce Pokémon quand c'est possible.  Absorbe les capacités Électrik, augmentant l'Attaque Spéciale d'un niveau.","Toutes les capacités de type Électrik à cible unique des autres Pokémon sont redirigées sur ce Pokémon s'il est une cible éligible.  Les capacités Électrik des autres Pokémon augmentent l'Attaque Spéciale de ce Pokémon d'un niveau, annulant n'importe quel autre effet sur lui, et ne peut pas manquer sa cible.
+
+Si la cible attendue de la capacité a aussi ce talent, la capacité n'est pas redirigée.  Quand plusieurs Pokémon avec ce talent sont des cibles possibles pour la redirection, la capacité est redirigée sur celui avec la plus grande stat de Vitesse, ou, en cas d'égalité, vers un Pokémon aléatoire de l'égalité.  Par Ici prend la priorité sur ce talent.
+
+Si le Pokémon est un type Sol et ainsi immunisé aux capacités Électrik, son immunité empêche le boost d'Attaque Spéciale."
+31,9,"Redirects single-target Electric moves to this Pokémon where possible.  Absorbs Electric moves, raising Special Attack one stage.","All other Pokémon's single-target Electric-type moves are redirected to this Pokémon if it is an eligible target.  Other Pokémon's Electric moves raise this Pokémon's Special Attack one stage, negating any other effect on it, and cannot miss it.
+
+If the move's intended target also has this ability, the move is not redirected.  When multiple Pokémon with this ability are possible targets for redirection, the move is redirected to the one with the highest Speed stat, or, in the case of a tie, to a random tied Pokémon.  Follow Me takes precedence over this ability.
+
+If the Pokémon is a Ground-type and thus immune to Electric moves, its immunity prevents the Special Attack boost."
+34,5,Double la Vitesse sous le soleil intense.,"La Vitesse de ce Pokémon est doublée sous soleil intense.
+
+Ce bonus ne compte pas comme une modification de stat."
+34,9,Doubles Speed during strong sunlight.,"This Pokémon's Speed is doubled during strong sunlight.
+
+This bonus does not count as a stat modifier."
+65,5,Renforce les capacités Plante pour infliger 1.5× de dégâts à 1/3 des PV max ou moins.,"Quand ce Pokémon a 1/3 de ses PV restants ou moins, ses capacités de type Plante infligent 1.5× plus de dégâts réguliers."
+65,9,Strengthens Grass moves to inflict 1.5× damage at 1/3 max HP or less.,"When this Pokémon has 1/3 or less of its HP remaining, its Grass-type moves inflict 1.5× as much regular damage."
+66,5,Renforce les capacités Feu pour infliger 1.5× de dégâts à 1/3 des PV max ou moins.,"Quand ce Pokémon a 1/3 de ses PV restants ou moins, ses capacités de type Feu infligent 1.5× plus de dégâts réguliers."
+66,9,Strengthens Fire moves to inflict 1.5× damage at 1/3 max HP or less.,"When this Pokémon has 1/3 or less of its HP remaining, its Fire-type moves inflict 1.5× as much regular damage."
+94,5,Augmente l'Attaque Spéciale de 1.5× mais coûte 1/8 des PV max après chaque tour sous soleil intense.,"Sous soleil intense, ce Pokémon a 1.5× son Attaque Spéciale mais subit 1/8 de ses PV maximum en dégâts après chaque tour."
+94,9,Increases Special Attack to 1.5× but costs 1/8 max HP after each turn during strong sunlight.,"During strong sunlight, this Pokémon has 1.5× its Special Attack but takes 1/8 of its maximum HP in damage after each turn."
+181,5,Renforce les capacités à contact d’1.33× leur puissance.,La puissance des capacités provoquant un contact physique entre le lanceur et l’adversaires est augmentée de 1.33×.
+181,9,Strengthens moves that make contact to 1.33× their power.,Strengthens moves that make contact to 1.33× their power.
+288,5,"Active le soleil intense en entrant au combat, et booste l’Attaque tant qu’il est actif.",Invoque un soleil ardent quand le Pokémon entre au combat. L'ancienne pulsation qui anime le Pokémon augmente également sa stat d'Attaque sous un soleil intense.
+288,9,"Turns the sunlight harsh when entering battle, and boosts Attack while active.","Turns the sunlight harsh when the Pokémon enters a battle. The ancient pulse thrumming through the Pokémon also boosts its Attack stat in harsh sunlight."
+312,9,"The Pokémon floats off the ground, making it immune to Ground-type moves, as well as the Spikes, Toxic Spikes, and Sticky Web statuses. When the Pokémon knocks out a target with an attack, its highest stat is boosted by 1 stage.","The Pokémon floats off the ground, making it immune to Ground-type moves, as well as the Spikes, Toxic Spikes, and Sticky Web statuses. When the Pokémon knocks out a target with an attack, its highest stat is boosted by 1 stage."

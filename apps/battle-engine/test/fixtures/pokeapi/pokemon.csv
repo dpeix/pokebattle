@@ -1,0 +1,7 @@
+id,identifier,species_id,height,weight,base_experience,order,is_default
+1,bulbasaur,1,7,69,64,1,1
+6,charizard,6,17,905,240,7,1
+25,pikachu,25,4,60,112,35,1
+1007,koraidon,1007,25,3030,335,998,1
+10034,charizard-mega-x,6,17,1105,285,8,0
+10264,koraidon-limited-build,1007,35,3030,335,,0

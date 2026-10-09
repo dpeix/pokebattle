@@ -1,0 +1,27 @@
+ability_id,local_language_id,name
+9,1,せいでんき
+9,5,Statik
+9,9,Static
+31,1,ひらいしん
+31,5,Paratonnerre
+31,9,Lightning Rod
+34,1,ようりょくそ
+34,5,Chlorophylle
+34,9,Chlorophyll
+65,1,しんりょく
+65,5,Engrais
+65,9,Overgrow
+66,1,もうか
+66,5,Brasier
+66,9,Blaze
+94,1,サンパワー
+94,5,Force Soleil
+94,9,Solar Power
+181,1,かたいツメ
+181,5,Griffe Dure
+181,9,Tough Claws
+288,1,ひひいろのこどう
+288,5,Pouls Orichalque
+288,9,Orichalcum Pulse
+312,9,Eelevate
+10001,9,Mountaineer
