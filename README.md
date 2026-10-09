@@ -7,6 +7,7 @@ Simulateur de combat web, organisé en monorepo pnpm + Turborepo.
 - Node.js 24 (`.nvmrc`)
 - pnpm 11 (version fixée par `packageManager` dans `package.json`)
 - Docker + Docker Compose
+- `make` et `openssl` (présents par défaut sur macOS et la plupart des Linux)
 
 ## Structure
 
@@ -21,59 +22,38 @@ packages/
   tsconfig/   # @pokebattle/tsconfig : configs TypeScript de base (base.json, node.json)
 ```
 
-## Commandes
-
-À lancer depuis la racine :
-
-| Commande         | Rôle                                               |
-| ---------------- | -------------------------------------------------- |
-| `pnpm install`   | Installe les dépendances de tout le workspace      |
-| `pnpm dev`       | Lance tous les services Node en mode développement |
-| `pnpm build`     | Build de tous les paquets (Turborepo)              |
-| `pnpm typecheck` | Vérification de types de tous les paquets          |
-| `pnpm test`      | Tests de tous les paquets                          |
-| `pnpm lint`      | Lint + vérification du formatage (Biome)           |
-| `pnpm format`    | Formate le code (Biome)                            |
-| `pnpm db:up`     | Démarre la base PostgreSQL du battle-engine        |
-| `pnpm db:down`   | Arrête la base (les données restent dans le volume) |
-| `pnpm api:up`    | Démarre l'API Symfony (conteneur FrankenPHP)       |
-| `pnpm api:down`  | Arrête l'API Symfony                               |
-| `pnpm api:test`  | Tests PHPUnit de l'API Symfony (conteneur démarré) |
-
-Commandes Drizzle (dans `apps/battle-engine`, ou via `pnpm --filter @pokebattle/battle-engine <script>`) :
-`db:generate` (génère les migrations SQL dans `drizzle/` depuis `src/db/schema.ts`), `db:migrate` (les applique), `db:studio`.
-
 ## Démarrage
 
 ```sh
-pnpm install
-cp apps/battle-engine/.env.example apps/battle-engine/.env   # puis changer le mot de passe (2 endroits)
-pnpm db:up
-pnpm dev
-
-pnpm api:up   # API utilisateurs (voir « Premier lancement de l'API utilisateurs »)
+make setup   # une seule fois : dépendances, fichiers .env locaux, images Docker, clés JWT, base de test
+make dev     # toute la stack : web, battle-engine, bases PostgreSQL et API Symfony
 ```
 
-`pnpm test` a besoin de la base démarrée (`pnpm db:up`) : le test de santé du battle-engine interroge la vraie base.
+`make setup` peut être relancé sans risque : il ne remplace jamais un `.env` ou une clé existants. Il crée `apps/battle-engine/.env` (mot de passe Postgres aléatoire) et ajoute `JWT_PASSPHRASE` dans `apps/user-api/.env.local`. Ces fichiers ne sont jamais commités.
 
-### Premier lancement de l'API utilisateurs
+`make dev` démarre les conteneurs en arrière-plan, puis le web et le battle-engine en mode watch au premier plan. Après Ctrl-C, les conteneurs restent démarrés : `make down` les arrête.
 
-Dans `apps/user-api` :
+## Commandes
 
-```sh
-docker compose build --pull --no-cache
-# Passphrase des clés JWT, jamais commitée (.env ne contient qu'une valeur vide)
-printf 'JWT_PASSPHRASE=%s\n' "$(openssl rand -hex 32)" > .env.local
-docker compose up --wait
-# Clés JWT de dev et de test (config/jwt/, ignorées par git)
-docker compose exec php bin/console lexik:jwt:generate-keypair
-docker compose exec -e APP_ENV=test php bin/console lexik:jwt:generate-keypair
-# Base de test (app_test), puis tests
-docker compose exec php bin/console -e test doctrine:database:create --if-not-exists
-pnpm api:test
-```
+Le `Makefile` est le point d'entrée ; `make` (ou `make help`) liste toutes les cibles. Les principales :
 
-`pnpm test` (Turborepo) ne lance que les tests Node ; les tests PHP passent par `pnpm api:test`.
+| Commande         | Rôle                                                                 |
+| ---------------- | -------------------------------------------------------------------- |
+| `make up` / `make down` / `make ps` | Démarre / arrête / liste les conteneurs (les volumes de données sont conservés) |
+| `make lint`      | Biome, PHP-CS-Fixer et PHPStan                                       |
+| `make format`    | Formate le code (Biome et PHP-CS-Fixer)                              |
+| `make typecheck` / `make build` | Types et build des paquets TypeScript (Turborepo)      |
+| `make test`      | Tests Node (Vitest) et PHP (PHPUnit), conteneurs démarrés au besoin  |
+| `make ci`        | Les mêmes vérifications que la CI                                    |
+| `make db-generate` / `make db-migrate` | Migrations Drizzle du battle-engine             |
+| `make api-console ARGS="…"` / `make api-shell` | Console Symfony / shell dans le conteneur PHP |
+| `make api-migrate` | Migrations Doctrine (dev)                                          |
+
+Les cibles `api-*` qui exécutent une commande dans le conteneur PHP supposent l'API démarrée (`make up`).
+
+Les scripts pnpm restent utilisables directement (le `Makefile` les appelle) : `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format`, `pnpm db:up`, `pnpm db:down`, `pnpm api:up`, `pnpm api:down`, `pnpm api:test`. Drizzle Studio : `pnpm --filter @pokebattle/battle-engine db:studio`.
+
+`pnpm test` (Turborepo) ne lance que les tests Node, qui ont besoin de la base du battle-engine (`make db-up`) ; les tests PHP passent par `make api-test`.
 
 Les migrations Doctrine sont appliquées automatiquement au démarrage du conteneur (base PostgreSQL `database`, propre à l'API).
 
