@@ -1,9 +1,16 @@
 import Fastify, { type FastifyServerOptions } from "fastify";
+import { dbPlugin } from "./plugins/db.js";
 import { healthRoutes } from "./routes/health.js";
 
-export function buildApp(options: FastifyServerOptions = {}) {
-  const app = Fastify(options);
+export interface AppOptions {
+  databaseUrl: string;
+  fastify?: FastifyServerOptions;
+}
 
+export function buildApp({ databaseUrl, fastify }: AppOptions) {
+  const app = Fastify(fastify);
+
+  app.register(dbPlugin, { databaseUrl });
   app.register(healthRoutes);
 
   return app;

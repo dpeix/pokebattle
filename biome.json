@@ -13,7 +13,8 @@
       "!**/dist",
       "!**/build",
       "!**/.react-router",
-      "!**/.turbo"
+      "!**/.turbo",
+      "!apps/battle-engine/drizzle"
     ]
   },
   "formatter": {

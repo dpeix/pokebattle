@@ -13,6 +13,7 @@ Simulateur de combat web, organisé en monorepo pnpm + Turborepo.
 ```
 apps/
   battle-engine/  # @pokebattle/battle-engine : API Fastify du simulateur de combat (port 3001)
+                  #   + compose.yaml : base PostgreSQL dédiée (port 5433), accès via Drizzle
 packages/
   shared/     # @pokebattle/shared : types et contrats partagés (compilé dans dist/)
   tsconfig/   # @pokebattle/tsconfig : configs TypeScript de base (base.json, node.json)
@@ -31,17 +32,37 @@ packages/
 | `pnpm test`      | Tests de tous les paquets                          |
 | `pnpm lint`      | Lint + vérification du formatage (Biome)           |
 | `pnpm format`    | Formate le code (Biome)                            |
+| `pnpm db:up`     | Démarre la base PostgreSQL du battle-engine        |
+| `pnpm db:down`   | Arrête la base (les données restent dans le volume) |
+
+Commandes Drizzle (dans `apps/battle-engine`, ou via `pnpm --filter @pokebattle/battle-engine <script>`) :
+`db:generate` (génère les migrations SQL dans `drizzle/` depuis `src/db/schema.ts`), `db:migrate` (les applique), `db:studio`.
+
+## Démarrage
+
+```sh
+pnpm install
+cp apps/battle-engine/.env.example apps/battle-engine/.env   # puis changer le mot de passe (2 endroits)
+pnpm db:up
+pnpm dev
+```
+
+`pnpm test` a besoin de la base démarrée (`pnpm db:up`) : le test de santé du battle-engine interroge la vraie base.
 
 ## Services
 
 | Service         | URL en dev               | Détails                                                     |
 | --------------- | ------------------------ | ----------------------------------------------------------- |
-| `battle-engine` | http://localhost:3001    | `GET /health` ; variables : voir `apps/battle-engine/.env.example` |
+| `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable) ; variables : voir `apps/battle-engine/.env.example` |
+| PostgreSQL du battle-engine | localhost:5433 | Conteneur `apps/battle-engine/compose.yaml`, utilisé uniquement par le battle-engine |
 
 ## Choix techniques
 
 - **pnpm workspaces + Turborepo** : orchestration et cache des tâches `build`, `dev`, `typecheck`, `test`.
 - **Biome** : lint et formatage du code TypeScript/JSON, configuré une seule fois à la racine (`biome.json`).
 - **Fastify** pour le simulateur : `buildApp()` (`apps/battle-engine/src/app.ts`) construit l'application sans ouvrir de port, les tests passent par `app.inject()` (Vitest).
+- **PostgreSQL + Drizzle** pour les données du simulateur (futur import PokeAPI) : base dédiée au battle-engine, conteneurisée ; le serveur Fastify tourne sur l'hôte. Le client est exposé via `app.db` (`src/plugins/db.ts`). Les migrations générées dans `drizzle/` sont commitées et ne se modifient pas à la main.
+- **Variables d'environnement** : `.env` (non commité) chargé par `loadDotEnv()` (`src/env.ts`, `process.loadEnvFile` natif) et lu aussi par Docker Compose.
+- **Tests non mis en cache** par Turborepo (`turbo.json`) : ils dépendent de l'état de la base.
 - **Scripts d'installation** : pnpm 11 les bloque par défaut ; les paquets autorisés sont listés dans `allowBuilds` (`pnpm-workspace.yaml`).
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.
