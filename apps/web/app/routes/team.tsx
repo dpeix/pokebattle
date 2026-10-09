@@ -1,5 +1,6 @@
 import {
   type InvalidTeamResponse,
+  type LearnableMove,
   MAX_MOVES_PER_POKEMON,
   TEAM_SIZE,
   type TeamIssue,
@@ -22,6 +23,7 @@ import {
 import { displayName } from "~/battle-log";
 import { TypeList } from "~/components/pokemon";
 import { PokemonSearch } from "~/components/pokemon-search";
+import { matchesSearch } from "~/search";
 import { commitSession, getSession } from "~/session.server";
 import type { Route } from "./+types/team";
 import type { loader as pokemonLoader } from "./team.pokemon.$id";
@@ -250,29 +252,14 @@ function SlotEditor({
               {slot.moveIds.length}/{MAX_MOVES_PER_POKEMON} attaques
             </span>
           </div>
-          <ul className="mt-2 max-h-48 overflow-y-auto text-sm">
-            {detail.moves.map((move) => {
-              const checked = slot.moveIds.includes(move.id);
-              return (
-                <li key={move.id}>
-                  <label className="flex items-center gap-2 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={
-                        !checked && slot.moveIds.length >= MAX_MOVES_PER_POKEMON
-                      }
-                      onChange={() => toggleMove(move.id)}
-                    />
-                    <span className="flex-1">{displayName(move)}</span>
-                    <span className="text-xs text-gray-500">
-                      {displayName(move.type)} · {move.power} · {move.pp} PP
-                    </span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+          <MovePicker
+            // Keyed by Pokémon: a new Pokémon starts with an empty filter.
+            key={detail.id}
+            label={`Filtrer les attaques du Pokémon ${index + 1}`}
+            moves={detail.moves}
+            selected={slot.moveIds}
+            onToggle={toggleMove}
+          />
         </div>
       )}
       {slot.pokemonId !== null && detail === undefined && (
@@ -288,5 +275,73 @@ function SlotEditor({
         </p>
       ))}
     </fieldset>
+  );
+}
+
+function MovePicker({
+  label,
+  moves,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  moves: LearnableMove[];
+  selected: number[];
+  onToggle: (moveId: number) => void;
+}) {
+  const [query, setQuery] = useState("");
+  // Selected moves stay listed, so the filter never hides a choice.
+  const shown = moves.filter(
+    (move) =>
+      selected.includes(move.id) ||
+      matchesSearch(query, [displayName(move), displayName(move.type)]),
+  );
+
+  return (
+    <>
+      <input
+        type="search"
+        aria-label={label}
+        placeholder="Filtrer les attaques (nom ou type)…"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => {
+          // The field sits in the team form: Enter must not submit it.
+          if (event.key === "Enter") {
+            event.preventDefault();
+          }
+        }}
+        className="mt-2 w-full rounded border border-gray-300 bg-white p-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+      />
+      {shown.length === 0 ? (
+        <p className="mt-2 text-sm text-gray-500">
+          Aucune attaque ne correspond.
+        </p>
+      ) : (
+        <ul className="mt-2 max-h-48 overflow-y-auto text-sm">
+          {shown.map((move) => {
+            const checked = selected.includes(move.id);
+            return (
+              <li key={move.id}>
+                <label className="flex items-center gap-2 py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={
+                      !checked && selected.length >= MAX_MOVES_PER_POKEMON
+                    }
+                    onChange={() => onToggle(move.id)}
+                  />
+                  <span className="flex-1">{displayName(move)}</span>
+                  <span className="text-xs text-gray-500">
+                    {displayName(move.type)} · {move.power} · {move.pp} PP
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }
