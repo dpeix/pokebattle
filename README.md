@@ -15,6 +15,7 @@ apps/
   web/            # @pokebattle/web : interface React Router v7 (mode framework, SSR, Tailwind) (port 5173)
   battle-engine/  # @pokebattle/battle-engine : API Fastify du simulateur de combat (port 3001)
                   #   + compose.yaml : base PostgreSQL dédiée (port 5433), accès via Drizzle
+  user-api/       # API Symfony de gestion des utilisateurs (symfony-docker, FrankenPHP), hors workspace pnpm
 packages/
   shared/     # @pokebattle/shared : types et contrats partagés (compilé dans dist/)
   tsconfig/   # @pokebattle/tsconfig : configs TypeScript de base (base.json, node.json)
@@ -35,6 +36,8 @@ packages/
 | `pnpm format`    | Formate le code (Biome)                            |
 | `pnpm db:up`     | Démarre la base PostgreSQL du battle-engine        |
 | `pnpm db:down`   | Arrête la base (les données restent dans le volume) |
+| `pnpm api:up`    | Démarre l'API Symfony (conteneur FrankenPHP)       |
+| `pnpm api:down`  | Arrête l'API Symfony                               |
 
 Commandes Drizzle (dans `apps/battle-engine`, ou via `pnpm --filter @pokebattle/battle-engine <script>`) :
 `db:generate` (génère les migrations SQL dans `drizzle/` depuis `src/db/schema.ts`), `db:migrate` (les applique), `db:studio`.
@@ -46,6 +49,9 @@ pnpm install
 cp apps/battle-engine/.env.example apps/battle-engine/.env   # puis changer le mot de passe (2 endroits)
 pnpm db:up
 pnpm dev
+
+# API utilisateurs (premier lancement : docker compose build --pull --no-cache dans apps/user-api)
+pnpm api:up
 ```
 
 `pnpm test` a besoin de la base démarrée (`pnpm db:up`) : le test de santé du battle-engine interroge la vraie base.
@@ -56,6 +62,7 @@ pnpm dev
 | --------------- | ------------------------ | ----------------------------------------------------------- |
 | `web`           | http://localhost:5173    | Interface utilisateur (`apps/web/app/routes.ts` pour les routes) |
 | `battle-engine` | http://localhost:3001    | `GET /health` (200, ou 503 si la base est injoignable) ; variables : voir `apps/battle-engine/.env.example` |
+| `user-api`      | https://localhost        | API Symfony 8 ; certificat TLS local auto-signé à accepter. Commandes : `docker compose exec php bin/console …` dans `apps/user-api` |
 | PostgreSQL du battle-engine | localhost:5433 | Conteneur `apps/battle-engine/compose.yaml`, utilisé uniquement par le battle-engine |
 
 ## Choix techniques
@@ -68,4 +75,6 @@ pnpm dev
 - **Tests non mis en cache** par Turborepo (`turbo.json`) : ils dépendent de l'état de la base.
 - **Scripts d'installation** : pnpm 11 les bloque par défaut ; les paquets autorisés sont listés dans `allowBuilds` (`pnpm-workspace.yaml`).
 - **React Router v7** (mode framework) généré depuis la branche `v7` de `remix-run/react-router-templates` ; la v8 est sortie mais la v7 est demandée. Le Dockerfile npm du template a été retiré (incompatible avec le monorepo pnpm). Biome analyse les directives Tailwind v4 (`css.parser.tailwindDirectives`).
+- **symfony-docker** pour l'API utilisateurs : copié depuis `dunglas/symfony-docker` au commit `4227566` (2026-08-31, sans son historique git), squelette Symfony 8.1 généré par le conteneur au premier démarrage. Sa documentation amont est dans `apps/user-api/README.md` et `apps/user-api/docs/` ; ses fichiers `.github/` ne sont pas exécutés depuis ce sous-dossier.
+- **FrankenPHP fixé en 1.12** (`apps/user-api/Dockerfile`) : la 1.13 embarque Mercure 1.0, incompatible avec la config Mercure du template (le conteneur redémarre en boucle, dunglas/symfony-docker#968). À retirer quand la PR amont #969 sera publiée et reportée ici.
 - **TypeScript 6** : la v7 n'est pas encore supportée par les outils de React Router v7.

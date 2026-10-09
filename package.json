@@ -14,7 +14,9 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "db:up": "pnpm --filter @pokebattle/battle-engine db:up",
-    "db:down": "pnpm --filter @pokebattle/battle-engine db:down"
+    "db:down": "pnpm --filter @pokebattle/battle-engine db:down",
+    "api:up": "cd apps/user-api && docker compose up --wait",
+    "api:down": "cd apps/user-api && docker compose down --remove-orphans"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
